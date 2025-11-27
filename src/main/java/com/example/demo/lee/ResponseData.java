@@ -1,12 +1,7 @@
-package com.example.demo.response;
+package com.example.demo.lee;
 
 import lombok.Data;
 
-/**
- * 后端返回信息
- * @author 姜浩
- * @param <T> 返回的对象类型
- */
 @Data
 public class ResponseData<T extends Object> {
 	
@@ -21,7 +16,6 @@ public class ResponseData<T extends Object> {
 	
 	/** 附加信息 */
 	protected T data;
-
 	protected ResponseData(){}
 	
 	protected ResponseData(int httpCode, boolean result, String msg, T data) {
@@ -64,6 +58,6 @@ public class ResponseData<T extends Object> {
 	}
 
 	public static <T> ResponseData<T> getError(String message) {
-		return new ResponseData<T>(500, false, message, null);
+		return new ResponseData<T>(500, false, message + ": ", null);
 	}
 }
