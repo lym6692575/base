@@ -1,0 +1,27 @@
+spring:
+  profiles:
+    active: dev
+  datasource:
+    url: jdbc:mysql://10.30.196.199:33006/jsxs_knowledge_db?autoReconnect=true&useSSL=false&useUnicode=true&characterEncoding=UTF8&serverTimezone=Asia/Shanghai
+    username: root
+    password: Mm86236480@123
+    driver-class-name: com.mysql.cj.jdbc.Driver
+upload:
+  path: D:\file\
+
+file:
+  # 手册设置
+  manualName: "江西公司合规管理一体化系统用户使用手册V1.0.doc"
+  manualPath: D:/file/
+
+logging:
+  level:
+    root: WARN
+
+#openoffice连接池
+#jodconverter:
+#  local:
+#    enabled: true
+#    office-home: D:\openoffice #安装路径
+#    max-tasks-per-process: 10
+#    port-numbers: 8100 #端口号

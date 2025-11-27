@@ -1,0 +1,22 @@
+# 应用服务 WEB 访问端口
+server:
+  port: 11330
+
+spring:
+  profiles:
+    active: '@env@'
+  mvc:
+    async:
+      request-timeout: 600000 # 设置异步请求超时时间为600000毫秒（10分钟）
+  jpa:
+    #数据库目标平台
+    #database-platform: org.hibernate.dialect.Oracle10gDialect    #Oracle数据库
+    database-platform: org.hibernate.dialect.MySQL5InnoDBDialect  #Mysql数据库
+    hibernate:
+      ddl-auto: update
+      naming:
+        physical-strategy: org.hibernate.boot.model.naming.PhysicalNamingStrategyStandardImpl
+  servlet:
+    multipart:
+      max-file-size: 50MB
+      max-request-size: 50MB
