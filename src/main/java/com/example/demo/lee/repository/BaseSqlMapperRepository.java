@@ -1,6 +1,6 @@
 package com.example.demo.lee.repository;
 
-import com.dqjq.base.common.lee.entity.BaseSqlMapper;
+import com.example.demo.lee.entity.BaseSqlMapper;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 

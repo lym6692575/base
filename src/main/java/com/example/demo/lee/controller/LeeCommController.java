@@ -1,6 +1,6 @@
 package com.example.demo.lee.controller;
 
-import com.dqjq.base.common.lee.service.BaseSqlMapperService;
+import com.example.demo.lee.service.BaseSqlMapperService;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;

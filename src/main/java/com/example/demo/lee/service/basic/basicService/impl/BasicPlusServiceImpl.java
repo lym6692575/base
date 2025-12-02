@@ -1,12 +1,11 @@
 package com.example.demo.lee.service.basic.basicService.impl;
 
-
-import com.dqjq.base.common.dto.userInfoDtoWithIdList;
-import com.dqjq.base.common.lee.ResponseData;
-import com.dqjq.base.common.lee.ResponseMsg;
-import com.dqjq.base.common.lee.mapper.BaseMapper;
-import com.dqjq.base.common.lee.repository.BasicRepository;
-import com.dqjq.base.common.lee.service.basic.basicService.BasicPlusService;
+import com.example.demo.lee.ResponseData;
+import com.example.demo.lee.ResponseMsg;
+import com.example.demo.lee.dto.userInfoDtoWithIdList;
+import com.example.demo.lee.mapper.BaseMapper;
+import com.example.demo.lee.repository.BasicRepository;
+import com.example.demo.lee.service.basic.basicService.BasicPlusService;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Sort;
 import org.springframework.transaction.annotation.Transactional;

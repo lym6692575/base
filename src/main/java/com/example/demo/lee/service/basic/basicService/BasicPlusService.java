@@ -1,8 +1,9 @@
 package com.example.demo.lee.service.basic.basicService;
 
 
-import com.dqjq.base.common.dto.userInfoDtoWithIdList;
-import com.dqjq.base.common.lee.ResponseData;
+
+import com.example.demo.lee.ResponseData;
+import com.example.demo.lee.dto.userInfoDtoWithIdList;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Sort;
 import org.springframework.transaction.annotation.Transactional;

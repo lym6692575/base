@@ -1,7 +1,12 @@
-package com.dqjq.base.common.lee.service.basic.basicService.impl;
+package com.example.demo.lee.service.basic.basicService.impl;
 
-import com.dqjq.base.common.lee.repository.BasicRepository;
-import com.dqjq.base.common.lee.service.basic.basicService.BasicService;
+
+import com.example.demo.lee.query.QueryDefaults;
+import com.example.demo.lee.query.QueryField;
+import com.example.demo.lee.query.QueryOperator;
+import com.example.demo.lee.query.QueryRelation;
+import com.example.demo.lee.repository.BasicRepository;
+import com.example.demo.lee.service.basic.basicService.BasicService;
 import lombok.Getter;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -16,10 +21,6 @@ import javax.persistence.EntityNotFoundException;
 import javax.persistence.PersistenceContext;
 import javax.persistence.criteria.*;
 import javax.persistence.Column;
-import com.dqjq.base.common.lee.query.QueryField;
-import com.dqjq.base.common.lee.query.QueryOperator;
-import com.dqjq.base.common.lee.query.QueryDefaults;
-import com.dqjq.base.common.lee.query.QueryRelation;
 import java.lang.reflect.Field;
 import java.math.BigDecimal;
 import java.util.*;

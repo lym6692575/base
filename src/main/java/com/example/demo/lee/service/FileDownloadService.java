@@ -1,8 +1,8 @@
-package com.dqjq.base.common.lee.service;
+package com.example.demo.lee.service;
 
-import com.dqjq.base.common.lee.FileDownloadStrategy.FileDownloadStrategy;
-import com.dqjq.base.common.lee.FileDownloadStrategy.ServerFixedLocationDownloadStrategy;
-import com.dqjq.base.common.lee.FileDownloadStrategy.StaticDirectoryDownloadStrategy;
+import com.example.demo.lee.FileDownloadStrategy.FileDownloadStrategy;
+import com.example.demo.lee.FileDownloadStrategy.ServerFixedLocationDownloadStrategy;
+import com.example.demo.lee.FileDownloadStrategy.StaticDirectoryDownloadStrategy;
 import org.springframework.core.io.ResourceLoader;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;

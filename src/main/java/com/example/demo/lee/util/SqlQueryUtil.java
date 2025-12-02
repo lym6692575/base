@@ -1,7 +1,8 @@
 package com.example.demo.lee.util;
 
-import com.dqjq.base.common.lee.entity.BaseSqlMapper;
-import com.dqjq.base.common.lee.repository.BaseSqlMapperRepository;
+
+import com.example.demo.lee.entity.BaseSqlMapper;
+import com.example.demo.lee.repository.BaseSqlMapperRepository;
 import org.jooq.Condition;
 import org.jooq.DSLContext;
 import org.jooq.Field;

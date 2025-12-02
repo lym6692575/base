@@ -1,7 +1,8 @@
-package com.dqjq.base.common.lee.service;
+package com.example.demo.lee.service;
 
-import com.dqjq.base.common.lee.entity.BaseSqlMapper;
-import com.dqjq.base.common.lee.repository.BaseSqlMapperRepository;
+
+import com.example.demo.lee.entity.BaseSqlMapper;
+import com.example.demo.lee.repository.BaseSqlMapperRepository;
 import org.jooq.*;
 import org.jooq.conf.ParamType;
 import org.jooq.impl.DSL;
@@ -17,12 +18,10 @@ public class BaseSqlMapperService {
 
     private final BaseSqlMapperRepository mapperRepository;
     private final DSLContext primaryDsl;
-    private final DSLContext secondaryDsl;
 
-    public BaseSqlMapperService(BaseSqlMapperRepository mapperRepository, @Qualifier("primary") DSLContext primaryDsl, @Qualifier("secondary") DSLContext secondaryDsl) {
+    public BaseSqlMapperService(BaseSqlMapperRepository mapperRepository, DSLContext primaryDsl) {
         this.mapperRepository = mapperRepository;
         this.primaryDsl = primaryDsl;
-        this.secondaryDsl = secondaryDsl;
     }
 
     /**
@@ -32,7 +31,7 @@ public class BaseSqlMapperService {
      * @return 下拉框数据列表
      */
     public List<Map<String, Object>> getDropdownData(String mappingKey, boolean useSecondary) {
-        DSLContext dsl = useSecondary ? secondaryDsl : primaryDsl;
+        DSLContext dsl = primaryDsl;
         BaseSqlMapper mapper = mapperRepository.findByMappingKey(mappingKey);
         if (mapper == null) {
             throw new IllegalArgumentException("无效的 mappingKey: " + mappingKey);
@@ -81,7 +80,7 @@ public class BaseSqlMapperService {
      * @return 下拉框数据列表
      */
     public List<Map<String, Object>> getDropdownDataWithParams(String mappingKey, boolean useSecondary, Object... params) {
-        DSLContext dsl = useSecondary ? secondaryDsl : primaryDsl;
+        DSLContext dsl = primaryDsl;
         BaseSqlMapper mapper = mapperRepository.findByMappingKey(mappingKey);
         if (mapper == null) {
             throw new IllegalArgumentException("无效的 mappingKey: " + mappingKey);
