@@ -1,11 +1,11 @@
-package com.example.demo.lee.service.basic.basicService.impl;
+package com.example.demo.lee.Basic.impl;
 
 import com.example.demo.lee.ResponseData;
 import com.example.demo.lee.ResponseMsg;
 import com.example.demo.lee.dto.userInfoDtoWithIdList;
 import com.example.demo.lee.mapper.BaseMapper;
 import com.example.demo.lee.repository.BasicRepository;
-import com.example.demo.lee.service.basic.basicService.BasicPlusService;
+import com.example.demo.lee.Basic.BasicPlusService;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Sort;
 import org.springframework.transaction.annotation.Transactional;

@@ -1,4 +1,4 @@
-package com.example.demo.lee.service.basic.basicService;
+package com.example.demo.lee.Basic;
 
 
 

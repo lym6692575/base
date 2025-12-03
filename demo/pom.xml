@@ -5,7 +5,6 @@
     <groupId>com.example</groupId>
     <artifactId>demo2</artifactId>
     <version>0.0.1-SNAPSHOT</version>
-    <packaging>pom</packaging>
     <name>demo2</name>
     <description>demo2</description>
     <parent>
@@ -151,12 +150,6 @@
             <artifactId>mysql-connector-java</artifactId>
             <scope>runtime</scope>
         </dependency>
-        <!-- 嵌入式数据库 H2，用于开发/测试 -->
-        <dependency>
-            <groupId>com.h2database</groupId>
-            <artifactId>h2</artifactId>
-            <scope>runtime</scope>
-        </dependency>
         <dependency>
             <groupId>org.jooq</groupId>
             <artifactId>jooq</artifactId>
@@ -233,16 +226,11 @@
         </plugins>
         <resources>
             <resource>
-                <directory>demo/src/main/resources</directory>
+                <directory>src/main/resources</directory>
                 <filtering>true</filtering>
             </resource>
         </resources>
     </build>
-    <modules>
-        <module>h2-server</module>
-        <module>codegen-tool</module>
-        <module>demo</module>
-    </modules>
     <profiles>
         <profile>
             <id>dev</id>

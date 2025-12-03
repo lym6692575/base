@@ -1,0 +1,18 @@
+{
+  "packageBase": "com.dqjq.myapp.oracle",
+  "module": "pwlpz",
+  "entityName": "MonTrgtGen",
+  "idType": "String",
+  "mapping": "SUBSELECT",
+  "tableName": "",
+  "subselect": "SELECT t.TRGT_NAME AS TRGT_NAME, t.PLANT_NAME AS PLANT_NAME, t.ACTIVE_CHK AS ACTIVE_CHK FROM IP_VARNC_MON_TRGT t",
+  "outputDir": "c:/Users/Administrator/Desktop/test/src/main/java",
+  "templatesDir": "",
+  "entityBaseClass": "com.dqjq.base.lee.entity.BaseEntity",
+  "dtoBaseClass": "com.dqjq.base.lee.dto.BaseDto",
+  "fields": [
+    { "name": "trgtName", "type": "String", "column": "TRGT_NAME", "id": true,  "label": "trgtName" },
+    { "name": "plantName", "type": "String", "column": "PLANT_NAME", "id": false, "label": "plantName" },
+    { "name": "activeChk", "type": "String", "column": "ACTIVE_CHK", "id": false, "label": "activeChk" }
+  ]
+}

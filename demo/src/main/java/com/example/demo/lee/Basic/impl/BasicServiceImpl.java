@@ -1,4 +1,4 @@
-package com.example.demo.lee.service.basic.basicService.impl;
+package com.example.demo.lee.Basic.impl;
 
 
 import com.example.demo.lee.query.QueryDefaults;
@@ -6,7 +6,7 @@ import com.example.demo.lee.query.QueryField;
 import com.example.demo.lee.query.QueryOperator;
 import com.example.demo.lee.query.QueryRelation;
 import com.example.demo.lee.repository.BasicRepository;
-import com.example.demo.lee.service.basic.basicService.BasicService;
+import com.example.demo.lee.Basic.BasicService;
 import lombok.Getter;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
