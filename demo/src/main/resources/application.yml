@@ -1,10 +1,10 @@
 # 应用服务 WEB 访问端口
 server:
-  port: 11330
+  port: 13388
 
 spring:
   profiles:
-    active: h2
+    active: 126
   mvc:
     async:
       request-timeout: 600000 # 设置异步请求超时时间为600000毫秒（10分钟）

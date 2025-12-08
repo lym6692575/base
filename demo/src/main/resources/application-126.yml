@@ -1,0 +1,23 @@
+spring:
+  profiles:
+    active: 126
+  datasource:
+    url: jdbc:mysql://10.114.15.126:33006/test?autoReconnect=true&useSSL=false&useUnicode=true&characterEncoding=UTF8&serverTimezone=Asia/Shanghai
+    username: root
+    password: Mm86236480@123
+    driver-class-name: com.mysql.cj.jdbc.Driver
+  jpa:
+    show-sql: true
+
+logging:
+  level:
+    root: WARN
+    org.hibernate.type.descriptor.sql: trace
+
+# openoffice连接池
+#jodconverter:
+#  local:
+#    enabled: true
+#    office-home: C:\openOffice_server #安装路径
+#    max-tasks-per-process: 10
+#    port-numbers: 8100 #端口号
