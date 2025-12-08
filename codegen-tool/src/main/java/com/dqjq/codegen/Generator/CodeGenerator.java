@@ -28,20 +28,20 @@ public class CodeGenerator {
         entityGen.generate();
         this.mainEntityPath = entityGen.getEntityPath();
 
-        // 2. 生成 DTO
-        new DtoGenerator(cfg).generate();
-
-        // 3. 生成 Repository
-        new RepositoryGenerator(cfg).generate();
-
-        // 4. 生成 Mapper
-        new MapperGenerator(cfg).generate();
-
-        // 5. 生成 Service
-        new ServiceGenerator(cfg).generate();
-
-        // 6. 生成 ServiceImpl
-        new ServiceImplGenerator(cfg).generate();
+//        // 2. 生成 DTO
+//        new DtoGenerator(cfg).generate();
+//
+//        // 3. 生成 Repository
+//        new RepositoryGenerator(cfg).generate();
+//
+//        // 4. 生成 Mapper
+//        new MapperGenerator(cfg).generate();
+//
+//        // 5. 生成 Service
+//        new ServiceGenerator(cfg).generate();
+//
+//        // 6. 生成 ServiceImpl
+//        new ServiceImplGenerator(cfg).generate();
     }
     
     public Path getMainEntityPath() {

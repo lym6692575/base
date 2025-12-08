@@ -1,18 +1,18 @@
 package com.example.demo.app.pwlpz.entity;
 
-import javax.persistence.Entity;
-import javax.persistence.Column;
 import javax.persistence.Table;
 import lombok.Data;
 import com.example.demo.common.lee.entity.BaseEntity;
+import javax.persistence.*;
 import io.swagger.annotations.ApiModelProperty;
-import javax.persistence.Id;
+import lombok.EqualsAndHashCode;
 
-
+@EqualsAndHashCode(callSuper = true)
 @Entity
-@javax.persistence.Table(name = "test")
-@lombok.Data
+@Table(name = "test")
+@Data
 public class MonTrgtGenEntity extends BaseEntity {
+
     @ApiModelProperty(value = "trgtName")
     @Column(name = "TRGT_NAME")
     private String trgtName;

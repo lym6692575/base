@@ -1,9 +1,12 @@
 package com.dqjq.codegen;
 
+import lombok.Getter;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Properties;
 
+@Getter
 public class CodegenConfig {
     public String packageBase;
     public String module;

@@ -5,6 +5,7 @@ import com.dqjq.codegen.Generator.CodeGenerator;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.time.LocalDateTime;
 import java.util.Properties;
 import java.util.Arrays;
 import java.util.List;
@@ -21,67 +22,82 @@ import java.util.List;
  * </p>
  */
 public class CodegenRunner {
-    public static void main(String[] args) throws Exception {
-        // 1. 尝试从命令行参数获取配置文件路径
-        String configPathArg = args != null && args.length > 0 ? args[0] : null;
-        
-        // 2. 尝试从系统属性获取，默认为 "codegen.properties"
-        String configPath = configPathArg != null ? configPathArg : System.getProperty("codegen.config", "codegen.properties");
-        
-        // 3. 如果使用的是默认配置名且文件不存在，进行智能回退
-        if (configPathArg == null && "codegen.properties".equals(configPath) && !Files.exists(Paths.get(configPath))) {
+    public static void main(String[] args) {
+        try {
+            System.out.println("执行时间: " + LocalDateTime.now().toString());
+            // 1. 尝试从命令行参数获取配置文件路径
+            String configPathArg = args != null && args.length > 0 ? args[0] : null;
             
-            // 3.1 尝试在多个可能的位置寻找 codegen.json
-            List<Path> candidates = Arrays.asList(
-                Paths.get("codegen.json"),                    // 当前目录
-                Paths.get("codegen-tool", "codegen.json"),    // 子模块目录（当在父工程根目录运行时）
-                Paths.get("..", "codegen.json")               // 上级目录（当在子目录运行时）
-            );
+            // 2. 尝试从系统属性获取，默认为 "codegen.properties"
+            String configPath = configPathArg != null ? configPathArg : System.getProperty("codegen.config", "codegen.properties");
             
-            boolean found = false;
-            for (Path candidate : candidates) {
-                if (Files.exists(candidate)) {
-                    System.out.println("检测到配置文件: " + candidate.toAbsolutePath());
-                    System.setProperty("codegen.config", candidate.toAbsolutePath().toString());
-                    configPath = System.getProperty("codegen.config", configPath);
-                    found = true;
-                    break;
-                }
-            }
-
-            // 3.2 若自动探测失败，则弹出 GUI 文件选择框
-            if (!found) {
-                System.out.println("未找到默认配置文件 (codegen.properties/json)，请在弹出的对话框中选择...");
-                javax.swing.SwingUtilities.invokeAndWait(() -> {
-                    javax.swing.JFileChooser chooser = new javax.swing.JFileChooser();
-                    chooser.setDialogTitle("选择配置文件 (.properties 或 .json)");
-                    chooser.setFileSelectionMode(javax.swing.JFileChooser.FILES_ONLY);
-                    // 设置默认目录为当前工作目录
-                    chooser.setCurrentDirectory(Paths.get(".").toFile());
-                    int result = chooser.showOpenDialog(null);
-                    if (result == javax.swing.JFileChooser.APPROVE_OPTION && chooser.getSelectedFile() != null) {
-                        System.setProperty("codegen.config", chooser.getSelectedFile().getAbsolutePath());
+            // 3. 如果使用的是默认配置名且文件不存在，进行智能回退
+            if (configPathArg == null && "codegen.properties".equals(configPath) && !Files.exists(Paths.get(configPath))) {
+                
+                // 3.1 尝试在多个可能的位置寻找 codegen.json
+                List<Path> candidates = Arrays.asList(
+                    Paths.get("codegen.json"),                    // 当前目录
+                    Paths.get("codegen-tool", "codegen.json"),    // 子模块目录（当在父工程根目录运行时）
+                    Paths.get("..", "codegen.json")               // 上级目录（当在子目录运行时）
+                );
+                
+                boolean found = false;
+                for (Path candidate : candidates) {
+                    if (Files.exists(candidate)) {
+                        System.out.println("检测到配置文件: " + candidate.toAbsolutePath());
+                        System.setProperty("codegen.config", candidate.toAbsolutePath().toString());
+                        configPath = System.getProperty("codegen.config", configPath);
+                        found = true;
+                        break;
                     }
-                });
-                
-                // 更新配置路径
-                configPath = System.getProperty("codegen.config", configPath);
-                
-                // 再次检查文件是否存在（防止用户取消选择）
-                if (!Files.exists(Paths.get(configPath))) {
-                    System.out.println("未选择配置文件，已取消生成");
-                    return;
+                }
+
+                // 3.2 若自动探测失败，则弹出 GUI 文件选择框
+                if (!found) {
+                    System.out.println("未找到默认配置文件 (codegen.properties/json)，请在弹出的对话框中选择...");
+                    // 使用 final 变量在 lambda 中引用
+                    final String[] selectedPath = new String[1];
+                    javax.swing.SwingUtilities.invokeAndWait(() -> {
+                        javax.swing.JFileChooser chooser = new javax.swing.JFileChooser();
+                        chooser.setDialogTitle("选择配置文件 (.properties 或 .json)");
+                        chooser.setFileSelectionMode(javax.swing.JFileChooser.FILES_ONLY);
+                        // 设置默认目录为当前工作目录
+                        chooser.setCurrentDirectory(Paths.get(".").toFile());
+                        int result = chooser.showOpenDialog(null);
+                        if (result == javax.swing.JFileChooser.APPROVE_OPTION && chooser.getSelectedFile() != null) {
+                            selectedPath[0] = chooser.getSelectedFile().getAbsolutePath();
+                        }
+                    });
+                    
+                    if (selectedPath[0] != null) {
+                         System.setProperty("codegen.config", selectedPath[0]);
+                         configPath = selectedPath[0];
+                    }
+                    
+                    // 再次检查文件是否存在（防止用户取消选择）
+                    if (configPath == null || !Files.exists(Paths.get(configPath))) {
+                        System.out.println("未选择配置文件，已取消生成");
+                        System.exit(1); // 明确退出
+                        return;
+                    }
                 }
             }
+            
+            // 4. 加载配置并执行生成
+            System.out.println("正在加载配置: " + configPath);
+            Properties p = ConfigLoader.load(configPath);
+            CodegenConfig cfg = CodegenConfig.fromProperties(p);
+            CodeGenerator g = new CodeGenerator(cfg);
+            g.generate();
+            System.out.println("代码生成完成! 实体名称: " + cfg.entityName);
+            if (g.getMainEntityPath() != null) {
+                System.out.println("输出路径: " + g.getMainEntityPath().toAbsolutePath());
+            }
+            
+        } catch (Exception e) {
+            System.err.println("\n[ERROR] 代码生成失败: " + e.getMessage());
+            e.printStackTrace();
+            System.exit(1); // 发生异常时返回非零状态码
         }
-        
-        // 4. 加载配置并执行生成
-        System.out.println("正在加载配置: " + configPath);
-        Properties p = ConfigLoader.load(configPath);
-        CodegenConfig cfg = CodegenConfig.fromProperties(p);
-        CodeGenerator g = new CodeGenerator(cfg);
-        g.generate();
-        System.out.println("代码生成完成! 实体名称: " + cfg.entityName);
-        System.out.println("输出路径: " + g.getMainEntityPath().toAbsolutePath());
     }
 }

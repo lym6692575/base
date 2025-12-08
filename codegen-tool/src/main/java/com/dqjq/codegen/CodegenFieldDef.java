@@ -1,5 +1,8 @@
 package com.dqjq.codegen;
 
+import lombok.Data;
+
+@Data
 public class CodegenFieldDef {
     public String name;
     public String type;

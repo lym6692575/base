@@ -1,30 +1,56 @@
 package com.dqjq.codegen.Generator;
 
 import com.dqjq.codegen.CodegenConfig;
+import freemarker.template.Configuration;
+import freemarker.template.Template;
+import freemarker.template.TemplateException;
+import freemarker.template.TemplateExceptionHandler;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
+import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Map;
 import java.util.Set;
 
 /**
  * 生成器基类
  * <p>
  * 提供通用的文件读写、模板加载和辅助方法。
- * 所有具体的代码生成器都应继承此类。
+ * 集成了 FreeMarker 模板引擎。
  * </p>
  */
 public abstract class BaseGenerator {
     protected final CodegenConfig cfg;
     protected final Path projectRoot = Paths.get("");
+    protected static Configuration freemarkerCfg;
 
     public BaseGenerator(CodegenConfig cfg) {
         this.cfg = cfg;
+        initFreeMarker();
+    }
+
+    private void initFreeMarker() {
+        if (freemarkerCfg == null) {
+            freemarkerCfg = new Configuration(Configuration.VERSION_2_3_32);
+            freemarkerCfg.setDefaultEncoding("UTF-8");
+            freemarkerCfg.setTemplateExceptionHandler(TemplateExceptionHandler.RETHROW_HANDLER);
+            freemarkerCfg.setLogTemplateExceptions(false);
+            freemarkerCfg.setWrapUncheckedExceptions(true);
+            
+            // 设置模板加载器：优先加载文件系统，回退到类路径
+            String fsDir = cfg.templatesDir;
+            if (fsDir != null && !fsDir.isEmpty() && Files.exists(Paths.get(fsDir))) {
+                try {
+                    freemarkerCfg.setDirectoryForTemplateLoading(Paths.get(fsDir).toFile());
+                } catch (IOException e) {
+                    System.err.println("警告: 无法设置外部模板目录: " + fsDir);
+                }
+            } else {
+                freemarkerCfg.setClassForTemplateLoading(BaseGenerator.class, "/codegen/templates/java");
+            }
+        }
     }
 
     /**
@@ -34,7 +60,31 @@ public abstract class BaseGenerator {
     public abstract void generate() throws IOException;
 
     /**
-     * 读取模板文件内容
+     * 使用 FreeMarker 渲染模板并写入文件
+     *
+     * @param templateName 模板文件名（如 entity.ftl）
+     * @param dataModel 数据模型（Map 或 POJO）
+     * @param outputPath 输出文件路径
+     * @throws IOException IO异常
+     * @throws TemplateException 模板渲染异常
+     */
+    protected void renderFreemarker(String templateName, Object dataModel, Path outputPath) throws IOException {
+        if (Files.exists(outputPath)) {
+            throw new IOException("目标文件已存在: " + projectRoot.resolve(outputPath));
+        }
+
+        try {
+            Template template = freemarkerCfg.getTemplate(templateName);
+            try (Writer writer = new OutputStreamWriter(Files.newOutputStream(outputPath.toFile().toPath()), StandardCharsets.UTF_8)) {
+                template.process(dataModel, writer);
+            }
+        } catch (TemplateException e) {
+            throw new IOException("模板渲染失败: " + templateName, e);
+        }
+    }
+
+    /**
+     * 读取旧版模板文件内容（保留用于兼容旧逻辑）
      * <p>
      * 优先从配置的 templatesDir 目录读取，
      * 如果不存在则从 classpath 下的 /codegen/templates/java/ 读取。
@@ -81,10 +131,7 @@ public abstract class BaseGenerator {
     }
 
     /**
-     * 将内容写入文件
-     * <p>
-     * 如果文件已存在，则抛出异常，防止覆盖。
-     * </p>
+     * 将内容写入文件（旧版字符串写入）
      *
      * @param path 文件路径
      * @param content 文件内容
@@ -99,9 +146,6 @@ public abstract class BaseGenerator {
 
     /**
      * 渲染 import 语句块
-     *
-     * @param imports 需要导入的类全限定名集合
-     * @return 格式化后的 import 语句字符串
      */
     protected String renderImports(Set<String> imports) {
         StringBuilder sb = new StringBuilder();
@@ -113,9 +157,6 @@ public abstract class BaseGenerator {
 
     /**
      * 获取简单类名
-     *
-     * @param fqcn 全限定类名
-     * @return 简单类名
      */
     protected String simpleClassName(String fqcn) {
         int i = fqcn.lastIndexOf('.');
@@ -124,8 +165,6 @@ public abstract class BaseGenerator {
     
     /**
      * 获取基础输出目录
-     *
-     * @return 基础输出目录路径
      */
     protected Path getBaseOutputDir() {
         String out = cfg.outputDir == null ? "" : cfg.outputDir.trim();
@@ -135,9 +174,6 @@ public abstract class BaseGenerator {
     
     /**
      * 确保目录存在
-     * 
-     * @param dir 目录路径
-     * @throws IOException IO异常
      */
     protected void ensureDirectory(Path dir) throws IOException {
         if (!Files.exists(dir)) {
