@@ -45,6 +45,8 @@ public class ServiceGenerator extends BaseGenerator {
         data.put("entityName", cfg.entityName);
         data.put("dtoName", cfg.entityName + "Dto");
         data.put("idType", cfg.idType);
+        data.put("serviceBaseClass", cfg.serviceBaseClass);
+        data.put("serviceImplBaseClass", cfg.serviceImplBaseClass);
 
         renderFreemarker("service.ftl", data, servicePath);
     }

@@ -40,8 +40,7 @@ public class DtoGenerator extends BaseGenerator {
         String dtoPkg = cfg.packageBase + "." + cfg.module + ".dto";
         
         Set<String> imports = new HashSet<>();
-        imports.add("lombok.Data");
-        imports.add("lombok.EqualsAndHashCode");
+        imports.add("lombok.*");
         imports.add("io.swagger.annotations.ApiModelProperty");
         
         for (CodegenFieldDef f : cfg.fields) {
@@ -55,12 +54,19 @@ public class DtoGenerator extends BaseGenerator {
             dtoExtends = " extends " + simpleClassName(cfg.dtoBaseClass);
         }
 
+        String entityExtends = null;
+        if (cfg.entityBaseClass != null && !cfg.entityBaseClass.isEmpty()) {
+            imports.add(cfg.entityBaseClass);
+            entityExtends = simpleClassName(cfg.entityBaseClass);
+        }
+
         Map<String, Object> data = new HashMap<>();
         data.put("package", dtoPkg);
         data.put("imports", imports);
         data.put("entityName", cfg.entityName);
         data.put("dtoExtends", dtoExtends);
         data.put("fields", cfg.fields);
+        data.put("entityExtends", entityExtends);
 
         renderFreemarker("dto.ftl", data, dtoPath);
     }

@@ -4,12 +4,12 @@ package ${package};
 import ${import};
 </#list>
 
-@lombok.Data
-@lombok.EqualsAndHashCode(callSuper=false)
-public class ${entityName}Dto${dtoExtends!} {
+@Data
+@EqualsAndHashCode(callSuper=false)
+public class ${entityName}Dto<#if entityExtends?has_content>${dtoExtends}</#if> {
 
 <#list fields as field>
-    @io.swagger.annotations.ApiModelProperty(value = "${field.label}")
+    @ApiModelProperty(value="${field.label}")
     private ${field.type} ${field.name};
 
 </#list>

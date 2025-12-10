@@ -54,6 +54,8 @@ public class ServiceImplGenerator extends BaseGenerator {
         data.put("dtoName", cfg.entityName + "Dto");
         data.put("idType", cfg.idType);
         data.put("fields", cfg.fields);
+        data.put("serviceBaseClass", cfg.serviceBaseClass);
+        data.put("serviceImplBaseClass", cfg.serviceImplBaseClass);
 
         renderFreemarker("serviceImpl.ftl", data, implPath);
     }

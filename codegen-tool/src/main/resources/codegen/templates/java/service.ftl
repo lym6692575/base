@@ -1,6 +1,6 @@
 package ${package};
 
-import com.dqjq.base.common.lee.service.basic.basicService.BasicPlusService;
+import ${serviceBaseClass};
 import ${dtoPackage}.${dtoName};
 import ${entityPackage}.${entityName}Entity;
 

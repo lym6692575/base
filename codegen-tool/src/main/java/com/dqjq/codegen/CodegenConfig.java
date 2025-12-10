@@ -19,6 +19,8 @@ public class CodegenConfig {
     public String templatesDir;
     public String entityBaseClass;
     public String dtoBaseClass;
+    public String serviceBaseClass;
+    public String serviceImplBaseClass;
     public List<CodegenFieldDef> fields = new ArrayList<>();
 
     public static CodegenConfig fromProperties(Properties p) {
@@ -34,6 +36,8 @@ public class CodegenConfig {
         c.templatesDir = p.getProperty("templatesDir", "");
         c.entityBaseClass = p.getProperty("entityBaseClass", "com.dqjq.base.lee.entity.BaseEntity");
         c.dtoBaseClass = p.getProperty("dtoBaseClass", "com.dqjq.base.lee.dto.BaseDto");
+        c.serviceBaseClass = p.getProperty("serviceBaseClass", "com.example.demo.common.lee.Basic.BasicPlusService");
+        c.serviceImplBaseClass = p.getProperty("serviceImplBaseClass", "com.example.demo.common.lee.Basic.impl.BasicPlusServiceImpl");
         String fieldsStr = p.getProperty("fields", "id:Long:ID:true:ID;name:String:NAME:false:名称");
         for (String part : fieldsStr.split(";")) {
             String[] seg = part.trim().split(":");

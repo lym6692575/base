@@ -10,6 +10,9 @@
   "templatesDir": "",
   "entityBaseClass": "com.example.demo.common.lee.entity.BaseEntity",
   "dtoBaseClass": "com.example.demo.common.lee.dto.BaseDto",
+  "mapperBaseClass": "com.example.demo.common.lee.mapper.BaseMapper",
+  "serviceBaseClass": "com.example.demo.common.lee.Basic.BasicPlusService",
+  "serviceImplBaseClass": "com.example.demo.common.lee.Basic.impl.BasicPlusServiceImpl",
   "fields": [
     {
       "name": "trgtName",
