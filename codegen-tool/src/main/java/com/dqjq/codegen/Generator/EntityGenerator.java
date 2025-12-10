@@ -42,7 +42,7 @@ public class EntityGenerator extends BaseGenerator {
         String entityPkg = cfg.packageBase + "." + cfg.module + ".entity";
         
         Set<String> imports = new HashSet<>();
-        imports.add("lombok.Data");
+        imports.add("lombok.*");
         imports.add("javax.persistence.*");
         imports.add("io.swagger.annotations.ApiModelProperty");
         

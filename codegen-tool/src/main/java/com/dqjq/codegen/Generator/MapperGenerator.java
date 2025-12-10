@@ -5,6 +5,8 @@ import lombok.Getter;
 
 import java.io.IOException;
 import java.nio.file.Path;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * Mapper 接口生成器
@@ -32,23 +34,18 @@ public class MapperGenerator extends BaseGenerator {
         
         this.mapperPath = mapperDir.resolve(cfg.entityName + "Mapper.java");
 
-        String template = readTemplate("mapper.tpl");
-        if (template.isEmpty()) {
-            throw new IOException("无法加载 Mapper 模板: mapper.tpl");
-        }
-
         String mapperPkg = cfg.packageBase + "." + cfg.module + ".mapper";
         String dtoPkg = cfg.packageBase + "." + cfg.module + ".dto";
         String entityPkg = cfg.packageBase + "." + cfg.module + ".entity";
 
-        String content = template
-                .replace("{{package}}", mapperPkg)
-                .replace("{{dtoPackage}}", dtoPkg)
-                .replace("{{entityPackage}}", entityPkg)
-                .replace("{{entityName}}", cfg.entityName)
-                .replace("{{dtoName}}", cfg.entityName + "Dto");
+        Map<String, Object> data = new HashMap<>();
+        data.put("package", mapperPkg);
+        data.put("dtoPackage", dtoPkg);
+        data.put("entityPackage", entityPkg);
+        data.put("entityName", cfg.entityName);
+        data.put("dtoName", cfg.entityName + "Dto");
 
-        writeFile(mapperPath, content);
+        renderFreemarker("mapper.ftl", data, mapperPath);
     }
 
 }

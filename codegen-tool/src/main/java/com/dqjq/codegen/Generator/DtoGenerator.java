@@ -6,8 +6,9 @@ import lombok.Getter;
 
 import java.io.IOException;
 import java.nio.file.Path;
+import java.util.HashMap;
 import java.util.HashSet;
-import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 /**
@@ -36,11 +37,6 @@ public class DtoGenerator extends BaseGenerator {
         
         this.dtoPath = dtoDir.resolve(cfg.entityName + "Dto.java");
 
-        String template = readTemplate("dto.tpl");
-        if (template.isEmpty()) {
-            throw new IOException("无法加载 DTO 模板: dto.tpl");
-        }
-
         String dtoPkg = cfg.packageBase + "." + cfg.module + ".dto";
         
         Set<String> imports = new HashSet<>();
@@ -59,25 +55,14 @@ public class DtoGenerator extends BaseGenerator {
             dtoExtends = " extends " + simpleClassName(cfg.dtoBaseClass);
         }
 
-        String fieldsContent = renderFields(cfg.fields);
+        Map<String, Object> data = new HashMap<>();
+        data.put("package", dtoPkg);
+        data.put("imports", imports);
+        data.put("entityName", cfg.entityName);
+        data.put("dtoExtends", dtoExtends);
+        data.put("fields", cfg.fields);
 
-        String content = template
-                .replace("{{package}}", dtoPkg)
-                .replace("{{imports}}", renderImports(imports))
-                .replace("{{entityName}}", cfg.entityName)
-                .replace("{{fields}}", fieldsContent)
-                .replace("{{dtoExtends}}", dtoExtends);
-
-        writeFile(dtoPath, content);
-    }
-
-    private String renderFields(List<CodegenFieldDef> fields) {
-        StringBuilder sb = new StringBuilder();
-        for (CodegenFieldDef f : fields) {
-            sb.append("    @io.swagger.annotations.ApiModelProperty(value = \"").append(f.label).append("\")\n");
-            sb.append("    private ").append(f.type).append(" ").append(f.name).append(";\n\n");
-        }
-        return sb.toString();
+        renderFreemarker("dto.ftl", data, dtoPath);
     }
 
 }

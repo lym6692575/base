@@ -1,12 +1,10 @@
 package com.example.demo.app.pwlpz.entity;
 
 import javax.persistence.Table;
-import lombok.Data;
 import com.example.demo.common.lee.entity.BaseEntity;
+import lombok.*;
 import javax.persistence.*;
 import io.swagger.annotations.ApiModelProperty;
-import lombok.EqualsAndHashCode;
-
 @EqualsAndHashCode(callSuper = true)
 @Entity
 @Table(name = "test")

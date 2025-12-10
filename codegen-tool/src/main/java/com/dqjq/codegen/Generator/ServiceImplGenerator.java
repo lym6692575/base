@@ -6,7 +6,9 @@ import lombok.Getter;
 
 import java.io.IOException;
 import java.nio.file.Path;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Service 实现类生成器
@@ -34,11 +36,6 @@ public class ServiceImplGenerator extends BaseGenerator {
         
         this.implPath = implDir.resolve(cfg.entityName + "ServiceImpl.java");
 
-        String template = readTemplate("serviceImpl.tpl");
-        if (template.isEmpty()) {
-            throw new IOException("无法加载 ServiceImpl 模板: serviceImpl.tpl");
-        }
-
         String servicePkg = cfg.packageBase + "." + cfg.module + ".service";
         String implPkg = servicePkg + ".impl";
         String dtoPkg = cfg.packageBase + "." + cfg.module + ".dto";
@@ -46,38 +43,18 @@ public class ServiceImplGenerator extends BaseGenerator {
         String repoPkg = cfg.packageBase + "." + cfg.module + ".repository";
         String mapperPkg = cfg.packageBase + "." + cfg.module + ".mapper";
 
-        String predicates = renderPredicates(cfg.fields);
+        Map<String, Object> data = new HashMap<>();
+        data.put("package", implPkg);
+        data.put("dtoPackage", dtoPkg);
+        data.put("entityPackage", entityPkg);
+        data.put("repoPackage", repoPkg);
+        data.put("mapperPackage", mapperPkg);
+        data.put("servicePackage", servicePkg);
+        data.put("entityName", cfg.entityName);
+        data.put("dtoName", cfg.entityName + "Dto");
+        data.put("idType", cfg.idType);
+        data.put("fields", cfg.fields);
 
-        String content = template
-                .replace("{{package}}", implPkg)
-                .replace("{{dtoPackage}}", dtoPkg)
-                .replace("{{entityPackage}}", entityPkg)
-                .replace("{{repoPackage}}", repoPkg)
-                .replace("{{mapperPackage}}", mapperPkg)
-                .replace("{{servicePackage}}", servicePkg)
-                .replace("{{entityName}}", cfg.entityName)
-                .replace("{{dtoName}}", cfg.entityName + "Dto")
-                .replace("{{idType}}", cfg.idType)
-                .replace("{{predicates}}", predicates);
-
-        writeFile(implPath, content);
+        renderFreemarker("serviceImpl.ftl", data, implPath);
     }
-
-    private String renderPredicates(List<CodegenFieldDef> fields) {
-        StringBuilder sb = new StringBuilder();
-        sb.append("        super.addPredicate(predicates, criteriaQuery, root, criteriaBuilder, key, value, params);\n");
-        for (CodegenFieldDef f : fields) {
-            if ("String".equals(f.type)) {
-                sb.append("        if (\"").append(f.name).append("\".equals(key) && value instanceof String) {\n");
-                sb.append("            predicates.add(criteriaBuilder.like(root.get(\"").append(f.name).append("\"), \"%\" + value + \"%\"));\n");
-                sb.append("        }\n");
-            } else {
-                sb.append("        if (\"").append(f.name).append("\".equals(key) && value != null) {\n");
-                sb.append("            predicates.add(criteriaBuilder.equal(root.get(\"").append(f.name).append("\"), value));\n");
-                sb.append("        }\n");
-            }
-        }
-        return sb.toString();
-    }
-
 }

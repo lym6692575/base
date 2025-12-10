@@ -5,6 +5,8 @@ import lombok.Getter;
 
 import java.io.IOException;
 import java.nio.file.Path;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * Service 接口生成器
@@ -32,24 +34,19 @@ public class ServiceGenerator extends BaseGenerator {
         
         this.servicePath = serviceDir.resolve(cfg.entityName + "Service.java");
 
-        String template = readTemplate("service.tpl");
-        if (template.isEmpty()) {
-            throw new IOException("无法加载 Service 模板: service.tpl");
-        }
-
         String servicePkg = cfg.packageBase + "." + cfg.module + ".service";
         String dtoPkg = cfg.packageBase + "." + cfg.module + ".dto";
         String entityPkg = cfg.packageBase + "." + cfg.module + ".entity";
 
-        String content = template
-                .replace("{{package}}", servicePkg)
-                .replace("{{dtoPackage}}", dtoPkg)
-                .replace("{{entityPackage}}", entityPkg)
-                .replace("{{entityName}}", cfg.entityName)
-                .replace("{{dtoName}}", cfg.entityName + "Dto")
-                .replace("{{idType}}", cfg.idType);
+        Map<String, Object> data = new HashMap<>();
+        data.put("package", servicePkg);
+        data.put("dtoPackage", dtoPkg);
+        data.put("entityPackage", entityPkg);
+        data.put("entityName", cfg.entityName);
+        data.put("dtoName", cfg.entityName + "Dto");
+        data.put("idType", cfg.idType);
 
-        writeFile(servicePath, content);
+        renderFreemarker("service.ftl", data, servicePath);
     }
 
 }

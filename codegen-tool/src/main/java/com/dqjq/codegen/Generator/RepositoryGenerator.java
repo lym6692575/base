@@ -5,6 +5,8 @@ import lombok.Getter;
 
 import java.io.IOException;
 import java.nio.file.Path;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * Repository 接口生成器
@@ -32,21 +34,16 @@ public class RepositoryGenerator extends BaseGenerator {
         
         this.repoPath = repoDir.resolve(cfg.entityName + "Repo.java");
 
-        String template = readTemplate("repository.tpl");
-        if (template.isEmpty()) {
-            throw new IOException("无法加载 Repository 模板: repository.tpl");
-        }
-
         String repoPkg = cfg.packageBase + "." + cfg.module + ".repository";
         String entityPkg = cfg.packageBase + "." + cfg.module + ".entity";
 
-        String content = template
-                .replace("{{package}}", repoPkg)
-                .replace("{{entityPackage}}", entityPkg)
-                .replace("{{entityName}}", cfg.entityName)
-                .replace("{{idType}}", cfg.idType);
+        Map<String, Object> data = new HashMap<>();
+        data.put("package", repoPkg);
+        data.put("entityPackage", entityPkg);
+        data.put("entityName", cfg.entityName);
+        data.put("idType", cfg.idType);
 
-        writeFile(repoPath, content);
+        renderFreemarker("repository.ftl", data, repoPath);
     }
 
 }
