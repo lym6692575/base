@@ -66,7 +66,7 @@ public abstract class BasicPlusServiceImpl<Entity, Dto, ID> extends BasicService
     @Transactional
     public ResponseData<Void> saveDto(Dto dto, Class<Entity> entityClass) {
         try {
-            Entity entity = baseMapper.dtoToEntity(dto, entityClass);
+            Entity entity = baseMapper.dtoToEntity(dto);
             saveEntity(entity);
             return ResponseData.getSuccess(ResponseMsg.SAVE_SUCCESS);
         } catch (Exception e) {
@@ -84,7 +84,7 @@ public abstract class BasicPlusServiceImpl<Entity, Dto, ID> extends BasicService
     @Transactional
     public Entity saveDtoWithoutResponseData(Dto dto, Class<Entity> entityClass) {
         try {
-            Entity entity = baseMapper.dtoToEntity(dto, entityClass);
+            Entity entity = baseMapper.dtoToEntity(dto);
             return saveEntity(entity);
         } catch (Exception e) {
             throw new RuntimeException(e.getMessage());
@@ -109,7 +109,7 @@ public abstract class BasicPlusServiceImpl<Entity, Dto, ID> extends BasicService
 
             // 将DTO列表转换为实体列表
             List<Entity> entities = dtos.stream()
-                    .map(dto -> baseMapper.dtoToEntity(dto, entityClass))
+                    .map(baseMapper::dtoToEntity)
                     .collect(Collectors.toList());
 
             // 批量保存实体到数据库
@@ -132,7 +132,7 @@ public abstract class BasicPlusServiceImpl<Entity, Dto, ID> extends BasicService
     public ResponseData<Page<Dto>> findDtoByPage(Map<String, Object> params, Class<Dto> dtoClass) {
         try {
             Page<Entity> result = findEntityByPage(params);
-            Page<Dto> dtoList = result.map(entity -> baseMapper.entityToDto(entity, dtoClass, params));
+            Page<Dto> dtoList = result.map(entity -> baseMapper.entityToDto(entity, params));
             return ResponseData.getSuccess(ResponseMsg.QUERY_SUCCESS, dtoList);
         } catch (Exception e) {
             return ResponseData.getError(ResponseMsg.QUERY_FAIL, e);
@@ -152,7 +152,7 @@ public abstract class BasicPlusServiceImpl<Entity, Dto, ID> extends BasicService
             List<Entity> result = findAllEntity(params);
             List<Dto> dtoList = (result == null) ? new ArrayList<>() :
                     result.stream()
-                            .map(entity -> baseMapper.entityToDto(entity, dtoClass, params))
+                            .map(entity -> baseMapper.entityToDto(entity, params))
                             .collect(Collectors.toList());
             return ResponseData.getSuccess(ResponseMsg.QUERY_SUCCESS, dtoList);
         } catch (Exception e) {
@@ -166,18 +166,18 @@ public abstract class BasicPlusServiceImpl<Entity, Dto, ID> extends BasicService
             List<Entity> result = findAllEntity(params);
 //            return (result == null) ? new ArrayList<>() :
 //                    result.stream()
-//                            .map(entity -> baseMapper.entityToDto(entity, dtoClass, params))
+//                            .map(entity -> baseMapper.entityToDto(entity, params))
 //                            .collect(Collectors.toList());
             // 判断是否需要特殊DTO转换
             if (params != null && params.containsKey(DTO_CONVERT_PARAM)) {
                 // 只传 entity 和 dtoClass
                 return result.stream()
-                        .map(entity -> baseMapper.entityToDto(entity, dtoClass))
+                        .map(entity -> baseMapper.entityToDto(entity))
                         .collect(Collectors.toList());
             } else {
                 // 传 entity, dtoClass, params
                 return result.stream()
-                        .map(entity -> baseMapper.entityToDto(entity, dtoClass, params))
+                        .map(entity -> baseMapper.entityToDto(entity, params))
                         .collect(Collectors.toList());
             }
         } catch (Exception e) {
@@ -191,7 +191,7 @@ public abstract class BasicPlusServiceImpl<Entity, Dto, ID> extends BasicService
             Page<Entity> result = findEntityByPageAndSort(params, sort);
             return (result == null) ? new ArrayList<>() :
                     result.stream()
-                            .map(entity -> baseMapper.entityToDto(entity, dtoClass, params))
+                            .map(entity -> baseMapper.entityToDto(entity, params))
                             .collect(Collectors.toList());
         } catch (Exception e) {
             return Collections.emptyList();
@@ -211,7 +211,7 @@ public abstract class BasicPlusServiceImpl<Entity, Dto, ID> extends BasicService
     public ResponseData<Dto> findDtoById(ID id, Class<Dto> dtoClass) {
         try {
             Optional<Entity> optional = findById(id);
-            return optional.map(entity -> ResponseData.getSuccess(ResponseMsg.QUERY_SUCCESS, baseMapper.entityToDto(entity, dtoClass))).orElseGet(() -> ResponseData.getError(ResponseMsg.QUERY_FAIL));
+            return optional.map(entity -> ResponseData.getSuccess(ResponseMsg.QUERY_SUCCESS, baseMapper.entityToDto(entity))).orElseGet(() -> ResponseData.getError(ResponseMsg.QUERY_FAIL));
         } catch (Exception e) {
             return ResponseData.getError(ResponseMsg.QUERY_FAIL, e);
         }
@@ -223,7 +223,7 @@ public abstract class BasicPlusServiceImpl<Entity, Dto, ID> extends BasicService
     public Optional<Dto> findDtoByIdWithoutResponseData(ID id, Class<Dto> dtoClass) {
         try {
             return findById(id)
-                    .map(entity -> baseMapper.entityToDto(entity, dtoClass));
+                    .map(entity -> baseMapper.entityToDto(entity));
         } catch (Exception e) {
             return Optional.empty();
         }
@@ -241,7 +241,7 @@ public abstract class BasicPlusServiceImpl<Entity, Dto, ID> extends BasicService
     public ResponseData<Page<Dto>> findDtoByPageAndSort(Map<String, Object> params, Sort sort, Class<Dto> dtoClass) {
         try {
             Page<Entity> result = findEntityByPageAndSort(params, sort);
-            Page<Dto> dtoList = result.map(entity -> baseMapper.entityToDto(entity, dtoClass, params));
+            Page<Dto> dtoList = result.map(entity -> baseMapper.entityToDto(entity, params));
             return ResponseData.getSuccess(ResponseMsg.COMMON_SUCCESS, dtoList);
         } catch (Exception e) {
             return ResponseData.getError(ResponseMsg.QUERY_FAIL, e);
@@ -251,7 +251,7 @@ public abstract class BasicPlusServiceImpl<Entity, Dto, ID> extends BasicService
     public Page<Dto> findDtoByPageAndSortWithoutResponseData(Map<String, Object> params, Sort sort, Class<Dto> dtoClass) {
         try {
             Page<Entity> result = findEntityByPageAndSort(params, sort);
-            return result.map(entity -> baseMapper.entityToDto(entity, dtoClass, params));
+            return result.map(entity -> baseMapper.entityToDto(entity, params));
         } catch (Exception e) {
             throw new RuntimeException(e.getMessage());
 //            return Page.empty();

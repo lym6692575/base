@@ -3,6 +3,7 @@ package ${package};
 <#list imports as impt>
 import ${impt};
 </#list>
+
 <#if entityExtends?has_content>
 @EqualsAndHashCode(callSuper = true)
 </#if>

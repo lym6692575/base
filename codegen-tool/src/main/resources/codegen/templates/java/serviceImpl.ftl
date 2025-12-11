@@ -25,18 +25,15 @@ public class ${entityName}ServiceImpl extends BasicPlusServiceImpl<${entityName}
     }
 
     @Override
-    public void addPredicate(List<Predicate> predicates, CriteriaQuery<?> criteriaQuery, Root<${entityName}Entity> root, CriteriaBuilder criteriaBuilder, String key, Object value, Map<String, Object> params) {
+    public void addPredicate(
+        List<Predicate> predicates,
+        CriteriaQuery<?> criteriaQuery,
+        Root<${entityName}Entity> root,
+        CriteriaBuilder criteriaBuilder,
+        String key,
+        Object value,
+        Map<String, Object> params
+    ) {
         super.addPredicate(predicates, criteriaQuery, root, criteriaBuilder, key, value, params);
-<#list fields as field>
-    <#if field.type == "String">
-        if ("${field.name}".equals(key) && value instanceof String) {
-            predicates.add(criteriaBuilder.like(root.get("${field.name}"), "%" + value + "%"));
-        }
-    <#else>
-        if ("${field.name}".equals(key) && value != null) {
-            predicates.add(criteriaBuilder.equal(root.get("${field.name}"), value));
-        }
-    </#if>
-</#list>
     }
 }

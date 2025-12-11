@@ -35,7 +35,7 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
                 .authorizeRequests()
                 .antMatchers("/h2-console/**").permitAll()
                 .antMatchers("/login").permitAll()
-                .antMatchers("/manager/file/**").permitAll()
+                .antMatchers("/test/**").permitAll()
                 .antMatchers("/manager/flow/downloadFlowGeFile/**").permitAll()
                 .antMatchers("/knowledge/case/downloadfile/**").permitAll()
                 .antMatchers("/knowledge/downloadfile-zip/**").permitAll()

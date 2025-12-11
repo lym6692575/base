@@ -1,26 +1,45 @@
 package ${package};
 
-import com.dqjq.base.common.lee.mapper.BaseMapper;
+import com.example.demo.common.lee.mapper.BaseMapper;
 import ${dtoPackage}.${dtoName};
 import ${entityPackage}.${entityName}Entity;
-import org.modelmapper.ModelMapper;
 import org.springframework.stereotype.Component;
 
+/**
+ * ${entityName} Mapper
+ * <p>
+ * 继承 BaseMapper，自动获得基础的 Entity <-> DTO 转换能力。
+ * 如有特殊转换逻辑，请在此类中重写 dtoToEntity 或 entityToDto 方法。
+ * </p>
+ */
 @Component
-public class ${entityName}Mapper implements BaseMapper<${dtoName}, ${entityName}Entity> {
-    private final ModelMapper modelMapper;
+public class ${entityName}Mapper extends BaseMapper<${dtoName}, ${entityName}Entity> {
+    
+    public ${entityName}Mapper() {
+        super(${dtoName}.class, ${entityName}Entity.class);
+    }
 
-    public ${entityName}Mapper(ModelMapper modelMapper) {
-        this.modelMapper = modelMapper;
+    /*
+    @Override
+    public ${entityName}Entity dtoToEntity(${dtoName} dto) {
+        // 1. 调用父类默认转换
+        ${entityName}Entity entity = super.dtoToEntity(dto);
+        // 2. 处理特殊逻辑
+        if (entity != null) {
+            // entity.setSomeField(convert(dto.getSomeField()));
+        }
+        return entity;
     }
 
     @Override
-    public ${entityName}Entity dtoToEntity(${dtoName} dto, Class<${entityName}Entity> entityType) {
-        return modelMapper.map(dto, entityType);
+    public ${dtoName} entityToDto(${entityName}Entity entity) {
+        // 1. 调用父类默认转换
+        ${dtoName} dto = super.entityToDto(entity);
+        // 2. 处理特殊逻辑
+        if (dto != null) {
+            // dto.setSomeField(convert(entity.getSomeField()));
+        }
+        return dto;
     }
-
-    @Override
-    public ${dtoName} entityToDto(${entityName}Entity entity, Class<${dtoName}> dtoType) {
-        return modelMapper.map(entity, dtoType);
-    }
+    */
 }
