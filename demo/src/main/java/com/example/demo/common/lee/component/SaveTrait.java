@@ -17,11 +17,11 @@ public interface SaveTrait<E, D, ID> extends BaseTrait<E, D, ID> {
     /**
      * 保存 DTO
      */
-    default ResponseData<Void> saveDto(D dto) {
+    default ResponseData<E> saveDto(D dto) {
         try {
             E entity = getMapper().dtoToEntity(dto);
-            getRepository().save(entity);
-            return ResponseData.getSuccess(ResponseMsg.SAVE_SUCCESS);
+            E resEntity = getRepository().save(entity);
+            return ResponseData.getSuccess(ResponseMsg.SAVE_SUCCESS, resEntity);
         } catch (Exception e) {
             return ResponseData.getError(ResponseMsg.SAVE_FAIL, e);
         }

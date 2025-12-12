@@ -62,7 +62,7 @@ public interface QueryTrait<E, D, ID> extends BaseTrait<E, D, ID> {
         }
     }
 
-    // --- 内部查询实现 (复用 BasicServiceImpl 的逻辑) ---
+    // --- 内部查询实现 ---
 
     default List<E> findAllEntity(Map<String, Object> params) {
         Specification<E> spec = getSpecification(params);
@@ -77,13 +77,24 @@ public interface QueryTrait<E, D, ID> extends BaseTrait<E, D, ID> {
 
     default Specification<E> getSpecification(Map<String, Object> params) {
         return (root, query, cb) -> {
+            // 1. 处理软删除
+            if (checkIfFieldExists(getEntityClass(), getIsDeleteFieldName())) {
+                // 如果参数里没有指定删除状态，则默认只查未删除的
+                if (!params.containsKey(getIsDeleteFieldName())) {
+                    params.put(getIsDeleteFieldName(), getNotDeletedValue());
+                }
+            }
+
             List<Predicate> predicates = new ArrayList<>();
             if (params != null) {
                 params.forEach((key, value) ->
                         addPredicate(predicates, query, root, cb, key, value, params)
                 );
             }
-            // addGroupBy(query, root, params); // 如有需要可实现
+            
+            // 2. 动态 Group By
+            addGroupBy(query, root, params);
+            
             return cb.and(predicates.toArray(new Predicate[0]));
         };
     }
@@ -97,34 +108,248 @@ public interface QueryTrait<E, D, ID> extends BaseTrait<E, D, ID> {
         return (sort != null) ? PageRequest.of(page, rows, sort) : PageRequest.of(page, rows);
     }
 
-    /**
-     * 核心：构建动态查询条件
-     * (这是 BasicServiceImpl.addPredicate 的精简版实现，为了保持 Trait 独立性，这里复制了核心逻辑)
-     */
+    // --- 核心动态查询逻辑 (迁移自 BasicServiceImpl) ---
+
     default void addPredicate(List<Predicate> predicates, CriteriaQuery<?> query, Root<E> root, CriteriaBuilder cb, String key, Object value, Map<String, Object> params) {
-        if (value == null) return;
+        if (value == null) {
+            return;
+        }
+        String baseKey = key;
+        QueryOperator overrideOp = null;
+        boolean hintIgnoreCase = false;
+        boolean strict = false;
         
-        // 简单实现 ID 查询
-        if ("id".equals(key)) {
-             predicates.add(cb.equal(root.get("id"), value));
-             return;
+        // 处理参数中的 strict 标志
+        if (params != null && params.containsKey("strict")) {
+            Object s = params.get("strict");
+            if (s instanceof Boolean) {
+                strict = (Boolean) s;
+            } else if (s != null) {
+                strict = Boolean.parseBoolean(s.toString());
+            }
+        }
+        
+        // 解析 key 中的修饰符 (e.g., name#LIKE#IC)
+        if (key != null) {
+            String[] parts = key.split("#");
+            if (parts.length >= 1) {
+                baseKey = parts[0];
+            }
+            if (parts.length >= 2) {
+                try {
+                    overrideOp = QueryOperator.valueOf(parts[1].toUpperCase());
+                } catch (IllegalArgumentException ignored) {
+                }
+            }
+            if (parts.length >= 3 && ("IC".equalsIgnoreCase(parts[2]) || "IGNORECASE".equalsIgnoreCase(parts[2]))) {
+                hintIgnoreCase = true;
+            }
         }
 
-        // 更多复杂逻辑（如注解解析、关联查询）可以逐步迁移过来
-        // 这里演示一个基础版本
+        // 处理特殊字段
+        switch (baseKey) {
+            case "id":
+                if (value instanceof List) {
+                    CriteriaBuilder.In<Object> inClause = cb.in(root.get("id"));
+                    for (Object id : (List<?>) value) {
+                        inClause.value(id);
+                    }
+                    predicates.add(inClause);
+                } else {
+                    predicates.add(cb.equal(root.get("id"), value));
+                }
+                return;
+            case "creatorId":
+                predicates.add(cb.equal(root.get("creatorId"), value));
+                return;
+            default:
+                if (baseKey.equals(getIsDeleteFieldName())) {
+                    predicates.add(cb.equal(root.get(getIsDeleteFieldName()), value));
+                    return;
+                }
+        }
+
+        Class<E> entityClass = getEntityClass();
+
+        // 处理关联查询 (Namespace.field)
+        if (baseKey.contains(".")) {
+            String[] ns = baseKey.split("\\.");
+            if (ns.length >= 2) {
+                String relAlias = ns[0];
+                String remoteField = ns[1];
+
+                QueryRelation matched = null;
+                QueryRelation[] relations = entityClass.getAnnotationsByType(QueryRelation.class);
+                if (relations != null) {
+                    for (QueryRelation r : relations) {
+                        String alias = (r.name() != null && !r.name().isEmpty()) ? r.name() : r.remote().getSimpleName();
+                        if (alias.equalsIgnoreCase(relAlias)) {
+                            matched = r;
+                            break;
+                        }
+                    }
+                }
+
+                if (matched == null) {
+                    if (strict) {
+                        throw new IllegalArgumentException("未找到关联关系: " + relAlias + " in entity " + entityClass.getSimpleName());
+                    } else {
+                        return;
+                    }
+                }
+
+                Subquery<Object> sub = query.subquery(Object.class);
+                Root<?> rr = sub.from(matched.remote());
+                Predicate bridge = cb.equal(rr.get(matched.remoteKey()), root.get(matched.localKey()));
+
+                QueryDefaults qd = entityClass.getAnnotation(QueryDefaults.class);
+                Predicate remoteCond = buildOperatorPredicate(cb, rr.get(remoteField), (overrideOp != null ? overrideOp : (qd != null ? qd.operator() : QueryOperator.EQ)), hintIgnoreCase || (qd != null && qd.ignoreCase()), value, qd);
+
+                if (remoteCond != null) {
+                    sub.select(rr.get(matched.remoteKey())).where(cb.and(bridge, remoteCond));
+                } else {
+                    sub.select(rr.get(matched.remoteKey())).where(bridge);
+                }
+                predicates.add(cb.exists(sub));
+                return;
+            }
+        }
+
+        // 处理普通字段查询
         try {
-            // 尝试直接匹配字段
-            // 注意：Trait 中无法直接用反射查找父类字段，除非提供辅助工具类
-            // 这里简化为直接假定字段存在
-            // 实际生产中建议提取一个 QueryUtils 工具类来处理 addPredicate 的复杂逻辑
+            Field field;
+            String fieldName = baseKey;
+            try {
+                field = findField(entityClass, baseKey);
+            } catch (NoSuchFieldException nf) {
+                field = null;
+                // 尝试查找 @Column(name=...)
+                for (Field f : entityClass.getDeclaredFields()) {
+                    Column col = f.getAnnotation(Column.class);
+                    if (col != null && col.name() != null && col.name().equalsIgnoreCase(baseKey)) {
+                        field = f;
+                        fieldName = f.getName();
+                        break;
+                    }
+                    if (f.getName().equalsIgnoreCase(baseKey)) {
+                        field = f;
+                        fieldName = f.getName();
+                        break;
+                    }
+                }
+                if (field == null) {
+                    if (strict) {
+                        throw new IllegalArgumentException("查询字段不存在: " + key);
+                    } else {
+                        return;
+                    }
+                }
+            }
+
+            QueryField qf = field.getAnnotation(QueryField.class);
+            QueryDefaults qd = entityClass.getAnnotation(QueryDefaults.class);
+            if (qf != null && qf.alias() != null && !qf.alias().isEmpty()) {
+                fieldName = qf.alias();
+            }
+            QueryOperator op = (overrideOp != null)
+                    ? overrideOp
+                    : (qf != null ? qf.operator() : (qd != null ? qd.operator() : QueryOperator.EQ));
+            boolean ignoreCase = (qf != null && qf.ignoreCase()) || hintIgnoreCase || (qd != null && qd.ignoreCase());
             
-            // 示例：简单的相等查询
-            // predicates.add(cb.equal(root.get(key), value));
-            
-            // 为了完整性，这里应该调用 QueryUtils.addPredicate(...) 
-            // 暂时留空或根据 key 做简单处理
-        } catch (Exception e) {
-            // 忽略不存在的字段
+            Predicate p = buildOperatorPredicate(cb, root.get(fieldName), op, ignoreCase, value, qd);
+            if (p != null) {
+                predicates.add(p);
+            }
+        } catch (SecurityException | IllegalArgumentException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    default Predicate buildOperatorPredicate(CriteriaBuilder cb, Path<?> path, QueryOperator op, boolean ignoreCaseHint, Object value, QueryDefaults qd) {
+        QueryOperator useOp = (op != null) ? op : (qd != null ? qd.operator() : QueryOperator.EQ);
+        switch (useOp) {
+            case EQ:
+                return cb.equal(path, value);
+            case LIKE:
+                if (value instanceof String) {
+                    String v = (String) value;
+                    if (ignoreCaseHint) {
+                        return cb.like(cb.lower(path.as(String.class)), "%" + v.toLowerCase() + "%");
+                    } else {
+                        return cb.like(path.as(String.class), "%" + v + "%");
+                    }
+                }
+                return null;
+            case IN:
+                if (value instanceof Collection) {
+                    return path.in((Collection<?>) value);
+                } else if (value instanceof Object[]) {
+                    return path.in(java.util.Arrays.asList((Object[]) value));
+                }
+                return null;
+            case GT:
+                return cb.greaterThan(path.<Comparable>as(Comparable.class), (Comparable) value);
+            case GE:
+                return cb.greaterThanOrEqualTo(path.<Comparable>as(Comparable.class), (Comparable) value);
+            case LT:
+                return cb.lessThan(path.<Comparable>as(Comparable.class), (Comparable) value);
+            case LE:
+                return cb.lessThanOrEqualTo(path.<Comparable>as(Comparable.class), (Comparable) value);
+            case STARTS_WITH:
+                if (value instanceof String) {
+                    String v = (String) value;
+                    if (ignoreCaseHint) {
+                        return cb.like(cb.lower(path.as(String.class)), v.toLowerCase() + "%");
+                    } else {
+                        return cb.like(path.as(String.class), v + "%");
+                    }
+                }
+                return null;
+            case ENDS_WITH:
+                if (value instanceof String) {
+                    String v = (String) value;
+                    if (ignoreCaseHint) {
+                        return cb.like(cb.lower(path.as(String.class)), "%" + v.toLowerCase());
+                    } else {
+                        return cb.like(path.as(String.class), "%" + v);
+                    }
+                }
+                return null;
+            case BETWEEN:
+                if (value instanceof java.util.List && ((java.util.List<?>) value).size() == 2) {
+                    Object start = ((java.util.List<?>) value).get(0);
+                    Object end = ((java.util.List<?>) value).get(1);
+                    if (start instanceof Comparable && end instanceof Comparable) {
+                        return cb.between(path.<Comparable>as(Comparable.class), (Comparable) start, (Comparable) end);
+                    }
+                } else if (value instanceof Object[] && ((Object[]) value).length == 2) {
+                    Object[] arr = (Object[]) value;
+                    if (arr[0] instanceof Comparable && arr[1] instanceof Comparable) {
+                        return cb.between(path.<Comparable>as(Comparable.class), (Comparable) arr[0], (Comparable) arr[1]);
+                    }
+                }
+                return null;
+            default:
+                return cb.equal(path, value);
+        }
+    }
+
+    default void addGroupBy(CriteriaQuery<?> query, Root<E> root, Map<String, Object> params) {
+        if (params.containsKey("groupByFields")) {
+            Object groupByFields = params.get("groupByFields");
+            if (groupByFields instanceof String) {
+                String fieldsStr = (String) groupByFields;
+                List<Expression<?>> groupByExpressions = new ArrayList<>();
+                for (String field : fieldsStr.split(",")) {
+                    groupByExpressions.add(root.get(field.trim()));
+                }
+                query.groupBy(groupByExpressions);
+            }
+        } else if (params.containsKey("groupByField")) {
+            Object groupByField = params.get("groupByField");
+            if (groupByField instanceof String) {
+                query.groupBy(root.get((String) groupByField));
+            }
         }
     }
 }

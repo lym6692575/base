@@ -3,7 +3,6 @@ package com.example.demo.common.lee.component;
 import com.example.demo.common.lee.ResponseData;
 import com.example.demo.common.lee.ResponseMsg;
 import com.example.demo.common.lee.dto.userInfoDtoWithIdList;
-import org.springframework.util.StringUtils;
 
 import java.lang.reflect.Field;
 import java.time.LocalDateTime;
@@ -63,15 +62,10 @@ public interface DeleteTrait<E, D, ID> extends BaseTrait<E, D, ID> {
 
     default void performSoftDelete(E entity, String userId, String userName) {
         try {
-            // 假设软删除字段固定为 "isDelete"，值为 1
-            // 实际项目中应从配置或注解读取，这里为了简化直接硬编码演示
-            // 或者通过 getIsDeleteFieldName() 接口方法获取
-            String fieldName = "isDelete";
-            Object deletedVal = 1;
-            Object notDeletedVal = 0;
+            String fieldName = getIsDeleteFieldName();
+            Object deletedVal = getDeletedValue();
 
             Field isDeleteField = findField(entity.getClass(), fieldName);
-            isDeleteField.setAccessible(true);
             Object currentValue = isDeleteField.get(entity);
             
             if (!deletedVal.equals(currentValue)) {
@@ -86,28 +80,6 @@ public interface DeleteTrait<E, D, ID> extends BaseTrait<E, D, ID> {
             throw new RuntimeException("该实体不支持软删除", e);
         } catch (IllegalAccessException e) {
             throw new RuntimeException("访问字段失败", e);
-        }
-    }
-
-    default Field findField(Class<?> clazz, String fieldName) throws NoSuchFieldException {
-        while (clazz != null) {
-            try {
-                Field field = clazz.getDeclaredField(fieldName);
-                field.setAccessible(true);
-                return field;
-            } catch (NoSuchFieldException e) {
-                clazz = clazz.getSuperclass();
-            }
-        }
-        throw new NoSuchFieldException(fieldName);
-    }
-
-    default void setFieldIfExists(Object entity, String fieldName, Object value) {
-        try {
-            Field field = findField(entity.getClass(), fieldName);
-            field.set(entity, value);
-        } catch (Exception e) {
-            // ignore
         }
     }
 }

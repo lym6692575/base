@@ -2,6 +2,8 @@ package com.example.demo.app.pwlpz.entity;
 
 import javax.persistence.Table;
 import com.example.demo.common.lee.entity.BaseEntity;
+import com.example.demo.common.lee.query.QueryDefaults;
+import com.example.demo.common.lee.query.QueryField;
 import lombok.*;
 import javax.persistence.*;
 import io.swagger.annotations.ApiModelProperty;
@@ -10,8 +12,8 @@ import io.swagger.annotations.ApiModelProperty;
 @Entity
 @Table(name = "test")
 @Data
+@QueryDefaults
 public class MonTrgtGenEntity extends BaseEntity {
-
     @ApiModelProperty(value = "trgtName")
     @Column(name = "TRGT_NAME")
     private String trgtName;

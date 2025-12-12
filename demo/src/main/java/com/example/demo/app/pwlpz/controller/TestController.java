@@ -2,6 +2,7 @@ package com.example.demo.app.pwlpz.controller;
 
 
 import com.example.demo.app.pwlpz.dto.MonTrgtGenDto;
+import com.example.demo.app.pwlpz.entity.MonTrgtGenEntity;
 import com.example.demo.app.pwlpz.service.MonTrgtGenService;
 import com.example.demo.common.lee.ResponseData;
 import io.swagger.annotations.ApiOperation;
@@ -28,7 +29,13 @@ public class TestController {
 
     @ApiOperation(value = "员工信息确认及填报", notes = "查询", httpMethod = "GET")
     @GetMapping
-    public ResponseData<Page<MonTrgtGenDto>> findJld(@RequestParam Map<String, Object> params) {
+    public ResponseData<Page<MonTrgtGenDto>> query(@RequestParam Map<String, Object> params) {
         return monTrgtGenService.findDtoByPage(params);
+    }
+
+    @ApiOperation(value = "员工信息确认及填报", notes = "存", httpMethod = "GET")
+    @PostMapping
+    public ResponseData<MonTrgtGenEntity> save(@RequestBody MonTrgtGenDto dto) {
+        return monTrgtGenService.saveDto(dto);
     }
 }
