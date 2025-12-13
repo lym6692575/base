@@ -1,0 +1,54 @@
+package {{ package }};
+
+import {{ entity_package }}.{{ entity_name }};
+import org.springframework.stereotype.Component;
+
+{% if has_base_class %}
+/**
+ * {{ entity_name }} Mapper
+ * <p>
+ * 继承 BaseMapper，自动获得基础的 Entity <-> DTO 转换能力。
+ * 如有特殊转换逻辑，请在此类中重写 dtoToEntity 或 entityToDto 方法。
+ * </p>
+ */
+@Component
+public class {{ entity_name }}Mapper extends {{ mapper_base_class }} {
+    
+    public {{ entity_name }}Mapper() {
+        super({{ entity_name }}.class);
+    }
+
+    /*
+    @Override
+    public {{ entity_name }} dtoToEntity({{ entity_name }}Dto dto) {
+        // 1. 调用父类默认转换
+        {{ entity_name }} entity = super.dtoToEntity(dto);
+        // 2. 处理特殊逻辑
+        if (entity != null) {
+            // entity.setSomeField(convert(dto.getSomeField()));
+        }
+        return entity;
+    }
+
+    @Override
+    public {{ entity_name }}Dto entityToDto({{ entity_name }} entity) {
+        // 1. 调用父类默认转换
+        {{ entity_name }}Dto dto = super.entityToDto(entity);
+        // 2. 处理特殊逻辑
+        if (dto != null) {
+            // dto.setSomeField(convert(entity.getSomeField()));
+        }
+        return dto;
+    }
+    */
+}
+{% else %}
+/**
+ * {{ entity_name }} Mapper
+ */
+@Component
+public interface {{ entity_name }}Mapper {
+    
+    // 可以在此定义自定义的映射方法
+}
+{% endif %}

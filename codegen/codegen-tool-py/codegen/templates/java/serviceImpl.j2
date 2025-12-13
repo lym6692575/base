@@ -1,0 +1,31 @@
+package {{ package }};
+
+import {{ entity_package }}.{{ entity_name }};
+import {{ dto_package }}.{{ entity_name }}Dto;
+import {{ service_package }}.{{ entity_name }}Service;
+import {{ repository_package }}.{{ entity_name }}Repository;
+import {{ mapper_package }}.{{ entity_name }}Mapper;
+import org.springframework.stereotype.Service;
+
+{% if has_base_class %}
+@Service
+public class {{ entity_name }}ServiceImpl extends {{ service_impl_base_class }}<{{ entity_name }}, {{ entity_name }}Dto, {{ id_type }}> implements {{ entity_name }}Service {
+    private final {{ entity_name }}Repository repository;
+
+    public {{ entity_name }}ServiceImpl({{ entity_name }}Repository repository, {{ entity_name }}Mapper mapper) {
+        super(repository, mapper, {{ entity_name }}.class);
+        this.repository = repository;
+    }
+}
+{% else %}
+@Service
+public class {{ entity_name }}ServiceImpl implements {{ entity_name }}Service {
+    private final {{ entity_name }}Repository repository;
+
+    public {{ entity_name }}ServiceImpl({{ entity_name }}Repository repository) {
+        this.repository = repository;
+    }
+    
+    // 可以在此实现服务方法
+}
+{% endif %}

@@ -1,0 +1,29 @@
+[project]
+name = "codegen-tool-py"
+version = "0.1.0"
+description = "Python版本的代码生成器，用于生成Java代码"
+readme = "README.md"
+authors = [
+    {
+        "name" = "Code Generator Team",
+        "email" = ""
+    }
+]
+license = {"text" = "MIT"}
+requires-python = ">=3.8"
+dependencies = [
+    "jinja2>=3.0.0",
+    "fastapi>=0.124.4",
+    "uvicorn>=0.38.0"
+]
+
+[project.urls]
+"Homepage" = "https://github.com/codegen-tool-py"
+"Repository" = "https://github.com/codegen-tool-py"
+
+[build-system]
+requires = ["setuptools>=64.0.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project.scripts]
+codegen = "codegen_runner:main"
