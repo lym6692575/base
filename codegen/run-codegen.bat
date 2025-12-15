@@ -1,29 +1,34 @@
 @echo off
-SETLOCAL
+SETLOCAL ENABLEEXTENSIONS
 
+REM ================================
 REM Code Generator Batch Script
-SET PYTHON=python
-SET SCRIPT=%~dp0codegen_runner.py
+REM ================================
+
+SET "PYTHON=python"
+SET "BASE_DIR=%~dp0"
+SET "SCRIPT=%BASE_DIR%codegen-tool-py\codegen_runner.py"
 
 REM Check Python availability
 %PYTHON% --version >nul 2>&1
-if errorlevel 1 (
-    echo Error: Python not found. Please install Python and add to PATH.
+IF ERRORLEVEL 1 (
+    echo Error: Python not found. Please install Python and add it to PATH.
     pause
-    exit /b 1
+    EXIT /B 1
 )
 
 REM Check script existence
-if not exist "%SCRIPT%" (
-    echo Error: codegen_runner.py not found.
+IF NOT EXIST "%SCRIPT%" (
+    echo Error: codegen_runner.py not found in "%BASE_DIR%codegen-tool-py".
+    echo Please make sure the file exists.
     pause
-    exit /b 1
+    EXIT /B 1
 )
 
 REM Run generator
-if "%~1" neq "" (
+IF "%~1" NEQ "" (
     %PYTHON% "%SCRIPT%" "%~1"
-) else (
+) ELSE (
     %PYTHON% "%SCRIPT%"
 )
 

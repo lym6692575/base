@@ -1,6 +1,5 @@
 <template>
   <div class="codegen-container">
-    <h1>代码生成管理</h1>
     <el-row :gutter="20">
       <el-col :span="12">
         <el-card title="配置参数">
@@ -68,9 +67,9 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue'
-import { ElMessage } from 'element-plus'
-import { useCodegenStore } from '../store/codegen'
+import {ref, reactive, onMounted} from 'vue'
+import {ElMessage} from 'element-plus'
+import {useCodegenStore} from '../store/codegen'
 
 const codegenStore = useCodegenStore()
 const formRef = ref(null)
@@ -88,13 +87,13 @@ const handleGenerate = async () => {
   try {
     await formRef.value.validate()
     generateLog.value += `开始生成代码...\n`
-    
+
     // 调用store中的生成代码方法
     const result = await codegenStore.generateCode(formData)
-    
+
     generateLog.value += `代码生成成功！\n生成文件：${result.outputFiles}\n`
     ElMessage.success('代码生成成功')
-    
+
     // 更新历史记录
     fetchHistory()
   } catch (error) {

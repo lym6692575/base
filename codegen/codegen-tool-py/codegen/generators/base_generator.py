@@ -89,9 +89,18 @@ class BaseGenerator:
         Args:
             file_path: 文件路径
             content: 文件内容
+            
+        Raises:
+            FileExistsError: 如果文件已存在
         """
         # 确保目录存在
         file_path.parent.mkdir(parents=True, exist_ok=True)
+        
+        # 检查文件是否已存在
+        if file_path.exists():
+            error_msg = f"文件已存在，无法生成: {file_path.absolute()}"
+            print(f"错误: {error_msg}")
+            raise FileExistsError(error_msg)
         
         # 写入文件
         with open(file_path, 'w', encoding='utf-8') as f:

@@ -23,46 +23,18 @@ def main():
     try:
         print(f"执行时间: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
         
-        # 1. 尝试从命令行参数获取配置文件路径
+        # 1. 尝试从命令行参数获取配置ID
         parser = argparse.ArgumentParser(description='代码生成器')
-        parser.add_argument('config_path', nargs='?', default=None, help='配置文件路径')
+        parser.add_argument('--config-id', type=int, required=True, help='配置ID，从数据库加载时使用')
         args = parser.parse_args()
-        config_path_arg = args.config_path
+        config_id = args.config_id
         
-        # 2. 尝试从系统环境变量获取
-        config_path = config_path_arg or os.environ.get('CODEGEN_CONFIG', 'codegen.properties')
-        
-        # 3. 如果使用的是默认配置名且文件不存在，进行智能回退
-        if config_path_arg is None and config_path == 'codegen.properties' and not Path(config_path).exists():
-            
-            # 3.1 尝试在当前目录及其子目录中寻找 codegen.json
-            current_dir = Path('.')
-            found = False
-            
-            # 递归地搜索当前目录及其子目录，寻找 codegen.json 文件
-            # 限制递归搜索的深度为 3，避免搜索过深导致性能问题
-            for file in current_dir.rglob('codegen.json'):
-                if file.is_file():
-                    print(f"检测到配置文件: {file.absolute()}")
-                    config_path = str(file.absolute())
-                    found = True
-                    break
-            
-            # 3.2 若自动探测失败，则要求用户手动输入
-            if not found:
-                print("未找到默认配置文件 (codegen.properties/json)，请手动输入配置文件路径:")
-                input_path = input().strip()
-                if not input_path or not Path(input_path).exists():
-                    print("无效的配置文件路径，已取消生成")
-                    sys.exit(1)
-                config_path = input_path
-        
-        # 4. 加载配置并执行生成
-        print(f"正在加载配置: {config_path}")
+        # 2. 加载配置并执行生成
+        print(f"正在从数据库加载配置，ID: {config_id}")
         
         # 加载配置
         config_loader = ConfigLoader()
-        config_dict = config_loader.load(config_path)
+        config_dict = config_loader.load(config_id=config_id)
         
         # 创建代码生成器并执行
         generator = CodeGenerator(config_dict)
