@@ -177,16 +177,17 @@ class ConfigLoader:
             ''', (config_id,))
             
             fields = cursor.fetchall()
-            parts = []
+            fields_list = []
             for field in fields:
-                name = field[0] or ''
-                type_ = field[1] or 'String'
-                column = field[2] or name
-                id_ = str(field[3] or False)
-                label = field[4] or name
-                parts.append(f"{name}:{type_}:{column}:{id_}:{label}")
+                fields_list.append({
+                    'name': field[0] or '',
+                    'type': field[1] or 'String',
+                    'column': field[2] or (field[0] or ''),
+                    'id': bool(field[3] or False),
+                    'label': field[4] or (field[0] or '')
+                })
             
-            config_dict['fields'] = ';'.join(parts)
+            config_dict['fields'] = fields_list
             
         except Exception as e:
             print(f"Error loading from database: {str(e)}")
@@ -280,26 +281,21 @@ class ConfigLoader:
                 config_id = cursor.lastrowid
             
             # 插入字段
-            fields_str = config_dict.get('fields', '')
-            for field_part in fields_str.split(';'):
-                if not field_part:
+            fields_list = config_dict.get('fields', [])
+            for field in fields_list:
+                if not field or not field.get('name'):
                     continue
                 
-                parts = field_part.split(':', 4)
-                if len(parts) < 5:
-                    continue
-                
-                name, type_, column, id_, label = parts
                 cursor.execute('''
                 INSERT INTO fields (config_id, name, type, column_name, is_id, label)
                 VALUES (?, ?, ?, ?, ?, ?)
                 ''', (
                     config_id,
-                    name.strip(),
-                    type_.strip(),
-                    column.strip(),
-                    id_.strip().lower() == 'true',
-                    label.strip()
+                    field.get('name', '').strip(),
+                    field.get('type', 'String').strip(),
+                    field.get('column', '').strip() or field.get('name', '').strip(),
+                    bool(field.get('id', False)),
+                    field.get('label', '').strip() or field.get('name', '').strip()
                 ))
             
             # 提交事务

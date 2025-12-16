@@ -44,21 +44,38 @@ class CodeGenerator:
         self.generators = []
         self._init_generators()
     
-    def _parse_fields(self, fields_str):
+    def _parse_fields(self, fields_input):
         """
-        解析字段定义字符串
+        解析字段定义
         
         Args:
-            fields_str: 字段定义字符串，格式为 "name:type:column:id:label;name2:type2:column2:id2:label2"
+            fields_input: 字段定义，可以是列表或字符串
+                         - 列表格式: [{"name": "id", "type": "Long", "column": "ID", "id": true, "label": "id"}, ...]
+                         - 字符串格式: "name:type:column:id:label;name2:type2:column2:id2:label2"
             
         Returns:
             字段定义列表
         """
         fields = []
-        if not fields_str:
+        
+        # 如果是列表格式，直接处理
+        if isinstance(fields_input, list):
+            for field in fields_input:
+                if isinstance(field, dict):
+                    fields.append({
+                        'name': field.get('name', '').strip(),
+                        'type': field.get('type', 'String').strip(),
+                        'column': field.get('column', '').strip() or field.get('name', '').strip(),
+                        'id': bool(field.get('id', False)),
+                        'label': field.get('label', '').strip() or field.get('name', '').strip()
+                    })
             return fields
         
-        for field_part in fields_str.split(';'):
+        # 如果是字符串格式，保持原有逻辑
+        if not fields_input:
+            return fields
+        
+        for field_part in fields_input.split(';'):
             if not field_part:
                 continue
             
