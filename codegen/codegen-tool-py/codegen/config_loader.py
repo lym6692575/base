@@ -141,7 +141,7 @@ class ConfigLoader:
             # 查询主配置
             cursor.execute('''
             SELECT 
-                package_base, module, entity_name, id_type, mapping, table_name, subselect, 
+                id, package_base, module, entity_name, id_type, mapping, table_name, subselect, 
                 output_dir, templates_dir, entity_base_class, dto_base_class, mapper_base_class, 
                 service_base_class, service_impl_base_class
             FROM config WHERE id = ?
@@ -153,20 +153,21 @@ class ConfigLoader:
             
             # 填充主配置
             config_dict = {
-                'packageBase': config_row[0],
-                'module': config_row[1],
-                'entityName': config_row[2],
-                'idType': config_row[3],
-                'mapping': config_row[4],
-                'tableName': config_row[5],
-                'subselect': config_row[6],
-                'outputDir': config_row[7],
-                'templatesDir': config_row[8],
-                'entityBaseClass': config_row[9],
-                'dtoBaseClass': config_row[10],
-                'mapperBaseClass': config_row[11],
-                'serviceBaseClass': config_row[12],
-                'serviceImplBaseClass': config_row[13]
+                'id': config_row[0],
+                'packageBase': config_row[1],
+                'module': config_row[2],
+                'entityName': config_row[3],
+                'idType': config_row[4],
+                'mapping': config_row[5],
+                'tableName': config_row[6],
+                'subselect': config_row[7],
+                'outputDir': config_row[8],
+                'templatesDir': config_row[9],
+                'entityBaseClass': config_row[10],
+                'dtoBaseClass': config_row[11],
+                'mapperBaseClass': config_row[12],
+                'serviceBaseClass': config_row[13],
+                'serviceImplBaseClass': config_row[14]
             }
             
             # 查询字段
@@ -194,12 +195,13 @@ class ConfigLoader:
         
         return config_dict
     
-    def save_to_db(self, config_dict):
+    def save_to_db(self, config_dict, config_id=None):
         """
         保存配置到数据库
         
         Args:
             config_dict: 配置字典
+            config_id: 配置ID，如果提供则更新现有配置，否则创建新配置
             
         Returns:
             保存后的配置ID
@@ -211,31 +213,71 @@ class ConfigLoader:
             # 开始事务
             conn.execute('BEGIN TRANSACTION')
             
-            # 插入主配置
-            cursor.execute('''
-            INSERT INTO config (
-                package_base, module, entity_name, id_type, mapping, table_name, subselect, 
-                output_dir, templates_dir, entity_base_class, dto_base_class, mapper_base_class, 
-                service_base_class, service_impl_base_class
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            ''', (
-                config_dict.get('packageBase'),
-                config_dict.get('module'),
-                config_dict.get('entityName'),
-                config_dict.get('idType'),
-                config_dict.get('mapping'),
-                config_dict.get('tableName'),
-                config_dict.get('subselect'),
-                config_dict.get('outputDir'),
-                config_dict.get('templatesDir'),
-                config_dict.get('entityBaseClass'),
-                config_dict.get('dtoBaseClass'),
-                config_dict.get('mapperBaseClass'),
-                config_dict.get('serviceBaseClass'),
-                config_dict.get('serviceImplBaseClass')
-            ))
-            
-            config_id = cursor.lastrowid
+            if config_id is not None:
+                # 更新现有配置
+                cursor.execute('''
+                UPDATE config SET 
+                    package_base = ?, 
+                    module = ?, 
+                    entity_name = ?, 
+                    id_type = ?, 
+                    mapping = ?, 
+                    table_name = ?, 
+                    subselect = ?, 
+                    output_dir = ?, 
+                    templates_dir = ?, 
+                    entity_base_class = ?, 
+                    dto_base_class = ?, 
+                    mapper_base_class = ?, 
+                    service_base_class = ?, 
+                    service_impl_base_class = ?
+                WHERE id = ?
+                ''', (
+                    config_dict.get('packageBase'),
+                    config_dict.get('module'),
+                    config_dict.get('entityName'),
+                    config_dict.get('idType'),
+                    config_dict.get('mapping'),
+                    config_dict.get('tableName'),
+                    config_dict.get('subselect'),
+                    config_dict.get('outputDir'),
+                    config_dict.get('templatesDir'),
+                    config_dict.get('entityBaseClass'),
+                    config_dict.get('dtoBaseClass'),
+                    config_dict.get('mapperBaseClass'),
+                    config_dict.get('serviceBaseClass'),
+                    config_dict.get('serviceImplBaseClass'),
+                    config_id
+                ))
+                
+                # 删除旧字段
+                cursor.execute('DELETE FROM fields WHERE config_id = ?', (config_id,))
+            else:
+                # 插入新配置
+                cursor.execute('''
+                INSERT INTO config (
+                    package_base, module, entity_name, id_type, mapping, table_name, subselect, 
+                    output_dir, templates_dir, entity_base_class, dto_base_class, mapper_base_class, 
+                    service_base_class, service_impl_base_class
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ''', (
+                    config_dict.get('packageBase'),
+                    config_dict.get('module'),
+                    config_dict.get('entityName'),
+                    config_dict.get('idType'),
+                    config_dict.get('mapping'),
+                    config_dict.get('tableName'),
+                    config_dict.get('subselect'),
+                    config_dict.get('outputDir'),
+                    config_dict.get('templatesDir'),
+                    config_dict.get('entityBaseClass'),
+                    config_dict.get('dtoBaseClass'),
+                    config_dict.get('mapperBaseClass'),
+                    config_dict.get('serviceBaseClass'),
+                    config_dict.get('serviceImplBaseClass')
+                ))
+                
+                config_id = cursor.lastrowid
             
             # 插入字段
             fields_str = config_dict.get('fields', '')

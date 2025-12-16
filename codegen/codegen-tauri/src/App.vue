@@ -2,7 +2,7 @@
 import { ref } from 'vue'
 import { useRoute } from 'vue-router'
 // 导入Element Plus图标
-import { House, DocumentCopy as CodeIcon, InfoFilled, Cpu, ArrowRight, ArrowLeft, User, CaretBottom } from '@element-plus/icons-vue'
+import { House, InfoFilled, Cpu, ArrowRight, ArrowLeft, User, CaretBottom } from '@element-plus/icons-vue'
 
 const route = useRoute()
 const isCollapse = ref(false)
@@ -15,9 +15,9 @@ const menuItems = [
     icon: House
   },
   {
-    index: '/codegen',
-    title: '代码生成',
-    icon: CodeIcon
+    index: '/config-manager',
+    title: '配置管理',
+    icon: InfoFilled
   },
   {
     index: '/about',

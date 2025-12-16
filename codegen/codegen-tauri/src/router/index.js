@@ -16,9 +16,9 @@ const routes = [
     component: () => import(/* webpackChunkName: "about" */ '../views/AboutView.vue')
   },
   {
-    path: '/codegen',
-    name: 'codegen',
-    component: () => import('../views/CodegenView.vue')
+    path: '/config-manager',
+    name: 'configManager',
+    component: () => import('../views/ConfigManagerView.vue')
   }
 ]
 

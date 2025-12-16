@@ -8,6 +8,7 @@ FastAPI 应用入口
 """
 
 from fastapi import FastAPI, HTTPException, Path
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import subprocess
 import json
@@ -27,6 +28,16 @@ app = FastAPI(
     title="Code Generator API",
     description="代码生成器 API，用于生成 Java 代码",
     version="1.0.0"
+)
+
+# 配置 CORS 中间件
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # 允许所有源
+    allow_credentials=True,
+    allow_methods=["*"],  # 允许所有方法
+    allow_headers=["*"],  # 允许所有头部
+    expose_headers=["*"]
 )
 
 # 根路径 GET 请求 - 返回 helloWorld
@@ -253,51 +264,14 @@ async def update_config(
                 }
             )
         
-        # 连接数据库，先删除旧配置的字段，再删除旧配置，最后插入新配置
-        db_path = config_loader.db_path
-        if not db_path.exists():
-            raise HTTPException(
-                status_code=500,
-                detail={
-                    "status": "error",
-                    "message": "数据库文件不存在"
-                }
-            )
+        # 更新现有配置
+        new_config_id = config_loader.save_to_db(request.config, id)
         
-        conn = sqlite3.connect(db_path)
-        cursor = conn.cursor()
-        
-        try:
-            # 开始事务
-            conn.execute('BEGIN TRANSACTION')
-            
-            # 删除旧配置的字段
-            cursor.execute('DELETE FROM fields WHERE config_id = ?', (id,))
-            # 删除旧配置
-            cursor.execute('DELETE FROM config WHERE id = ?', (id,))
-            
-            # 插入新配置
-            new_config_id = config_loader.save_to_db(request.config)
-            
-            # 提交事务
-            conn.commit()
-            
-            return {
-                "status": "success",
-                "message": "配置更新成功",
-                "config_id": new_config_id
-            }
-        except Exception as e:
-            conn.rollback()
-            raise HTTPException(
-                status_code=500,
-                detail={
-                    "status": "error",
-                    "message": f"更新配置失败: {str(e)}"
-                }
-            )
-        finally:
-            conn.close()
+        return {
+            "status": "success",
+            "message": "配置更新成功",
+            "config_id": new_config_id
+        }
     except HTTPException:
         raise
     except Exception as e:
