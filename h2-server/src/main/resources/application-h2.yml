@@ -1,5 +1,0 @@
-h2:
-  server:
-    port: 9092
-    baseDir: ./h2-server/data
-    allowOthers: true
