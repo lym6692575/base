@@ -6,7 +6,44 @@
 """
 
 from pathlib import Path
-from jinja2 import Environment, FileSystemLoader
+import sqlite3
+from jinja2 import Environment, FileSystemLoader, BaseLoader, TemplateNotFound
+
+class SQLiteLoader(BaseLoader):
+    """SQLite数据库模板加载器"""
+    
+    def __init__(self, db_path):
+        self.db_path = db_path
+
+    def get_source(self, environment, template):
+        try:
+            # 如果 template 是一个 ID（数字字符串），则按 ID 查询
+            # 如果是名称，则按名称查询
+            conn = sqlite3.connect(self.db_path)
+            cursor = conn.cursor()
+            
+            if template.isdigit():
+                cursor.execute(
+                    "SELECT content, updated_at FROM templates WHERE id = ?",
+                    (int(template),)
+                )
+            else:
+                cursor.execute(
+                    "SELECT content, updated_at FROM templates WHERE name = ?",
+                    (template,)
+                )
+            
+            row = cursor.fetchone()
+            conn.close()
+            
+            if row is None:
+                raise TemplateNotFound(template)
+                
+            source = row[0]
+            # 简单的缓存失效检查：始终重新加载（或者可以基于version）
+            return source, template, lambda: True
+        except Exception as e:
+            raise TemplateNotFound(template) from e
 
 class BaseGenerator:
     """生成器基类"""
@@ -32,18 +69,14 @@ class BaseGenerator:
         Returns:
             Jinja2环境对象
         """
-        # 默认模板目录
-        default_templates_dir = Path(__file__).parent.parent / 'templates'
+        # 数据库路径
+        db_path = Path(__file__).parent.parent / 'dataBase' / 'codegen.db'
         
-        # 如果指定了模板目录，则使用指定的目录
-        templates_dir = self.config_dict.get('templatesDir', '')
-        if templates_dir:
-            template_path = Path(templates_dir)
-        else:
-            template_path = default_templates_dir
-        
+        if not db_path.exists():
+            raise FileNotFoundError(f"Database not found at {db_path}")
+
         return Environment(
-            loader=FileSystemLoader(template_path),
+            loader=SQLiteLoader(str(db_path)),
             trim_blocks=True,
             lstrip_blocks=True,
             autoescape=False

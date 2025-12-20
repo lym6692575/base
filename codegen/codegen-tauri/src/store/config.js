@@ -102,6 +102,7 @@ export const useConfigStore = defineStore('config', {
           mapperBaseClass: '',
           serviceBaseClass: '',
           serviceImplBaseClass: '',
+          scheme_id: null,
           fields: ''
         }
       }

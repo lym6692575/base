@@ -340,6 +340,408 @@ async def delete_config(id: int = Path(..., description="配置ID")):
         )
 
 
+# GET /schemes - 获取所有方案
+@app.get("/schemes")
+async def get_all_schemes():
+    try:
+        db_path = config_loader.db_path
+        conn = sqlite3.connect(db_path)
+        conn.row_factory = sqlite3.Row
+        cursor = conn.cursor()
+        
+        cursor.execute("SELECT * FROM schemes ORDER BY id")
+        schemes = [dict(row) for row in cursor.fetchall()]
+        
+        conn.close()
+        
+        return {
+            "status": "success",
+            "data": schemes
+        }
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail={
+                "status": "error",
+                "message": f"获取方案列表失败: {str(e)}"
+            }
+        )
+
+# GET /templates - 获取所有模板
+@app.get("/templates")
+async def get_all_templates():
+    try:
+        db_path = config_loader.db_path
+        conn = sqlite3.connect(db_path)
+        conn.row_factory = sqlite3.Row
+        cursor = conn.cursor()
+        
+        # 只查询未删除的模板
+        cursor.execute("SELECT id, name, description, type, updated_at FROM templates WHERE is_deleted = 0 ORDER BY name")
+        templates = [dict(row) for row in cursor.fetchall()]
+        
+        conn.close()
+        
+        return {
+            "status": "success",
+            "data": templates
+        }
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail={
+                "status": "error",
+                "message": f"获取模板列表失败: {str(e)}"
+            }
+        )
+
+# GET /templates/{id} - 获取特定模板内容
+@app.get("/templates/{id}")
+async def get_template(id: int):
+    try:
+        db_path = config_loader.db_path
+        conn = sqlite3.connect(db_path)
+        conn.row_factory = sqlite3.Row
+        cursor = conn.cursor()
+        
+        cursor.execute("SELECT * FROM templates WHERE id = ? AND is_deleted = 0", (id,))
+        row = cursor.fetchone()
+        conn.close()
+        
+        if not row:
+            raise HTTPException(status_code=404, detail="Template not found")
+            
+        return {
+            "status": "success",
+            "data": dict(row)
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail={
+                "status": "error",
+                "message": f"获取模板内容失败: {str(e)}"
+            }
+        )
+
+# PUT /templates/{id} - 更新模板内容
+@app.put("/templates/{id}")
+async def update_template(id: int, request: dict):
+    try:
+        content = request.get('content')
+        type_ = request.get('type')
+        description = request.get('description')
+        
+        # Build query dynamically
+        updates = ["updated_at = CURRENT_TIMESTAMP"]
+        params = []
+        
+        if content is not None:
+            updates.append("content = ?")
+            params.append(content)
+        if type_ is not None:
+            updates.append("type = ?")
+            params.append(type_)
+        if description is not None:
+            updates.append("description = ?")
+            params.append(description)
+            
+        params.append(id)
+        
+        db_path = config_loader.db_path
+        conn = sqlite3.connect(db_path)
+        cursor = conn.cursor()
+        
+        cursor.execute(
+            f"UPDATE templates SET {', '.join(updates)} WHERE id = ?",
+            params
+        )
+        conn.commit()
+        conn.close()
+        
+        return {"status": "success", "message": "Template updated"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+# POST /templates - 创建新模板
+@app.post("/templates")
+async def create_template(request: dict):
+    try:
+        name = request.get('name')
+        content = request.get('content', '')
+        description = request.get('description', '')
+        type_ = request.get('type', '')
+        
+        if not name:
+             raise HTTPException(status_code=400, detail="Name is required")
+
+        db_path = config_loader.db_path
+        conn = sqlite3.connect(db_path)
+        cursor = conn.cursor()
+        
+        try:
+            cursor.execute(
+                "INSERT INTO templates (name, content, description, type) VALUES (?, ?, ?, ?)",
+                (name, content, description, type_)
+            )
+            new_id = cursor.lastrowid
+            conn.commit()
+            return {"status": "success", "data": {"id": new_id}, "message": "Template created"}
+        except sqlite3.IntegrityError:
+            raise HTTPException(status_code=409, detail="Template name already exists")
+        finally:
+            conn.close()
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+# DELETE /templates/{id} - 标记删除模板
+@app.delete("/templates/{id}")
+async def delete_template(id: int):
+    try:
+        db_path = config_loader.db_path
+        conn = sqlite3.connect(db_path)
+        cursor = conn.cursor()
+        
+        cursor.execute(
+            "UPDATE templates SET is_deleted = 1, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
+            (id,)
+        )
+        conn.commit()
+        conn.close()
+        
+        return {"status": "success", "message": "Template deleted"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+# --- Scheme APIs ---
+
+# POST /schemes - 创建方案
+@app.post("/schemes")
+async def create_scheme(request: dict):
+    try:
+        name = request.get('name')
+        description = request.get('description', '')
+        group_name = request.get('group_name', 'Default')
+        variables = request.get('variables', '{}') # JSON string
+        
+        if not name:
+             raise HTTPException(status_code=400, detail="Name is required")
+
+        db_path = config_loader.db_path
+        conn = sqlite3.connect(db_path)
+        cursor = conn.cursor()
+        
+        try:
+            cursor.execute(
+                "INSERT INTO schemes (name, description, group_name, variables) VALUES (?, ?, ?, ?)",
+                (name, description, group_name, variables)
+            )
+            new_id = cursor.lastrowid
+            conn.commit()
+            return {"status": "success", "data": {"id": new_id}, "message": "Scheme created"}
+        except sqlite3.IntegrityError:
+            raise HTTPException(status_code=409, detail="Scheme name already exists")
+        finally:
+            conn.close()
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+# PUT /schemes/{id} - 更新方案
+@app.put("/schemes/{id}")
+async def update_scheme(id: int, request: dict):
+    try:
+        name = request.get('name')
+        description = request.get('description')
+        group_name = request.get('group_name')
+        variables = request.get('variables') # Expecting JSON string or dict
+        
+        # If variables is a dict, convert to string
+        if isinstance(variables, dict):
+            variables = json.dumps(variables, ensure_ascii=False)
+
+        db_path = config_loader.db_path
+        conn = sqlite3.connect(db_path)
+        cursor = conn.cursor()
+        
+        updates = []
+        params = []
+        
+        if name is not None:
+            updates.append("name = ?")
+            params.append(name)
+        if description is not None:
+            updates.append("description = ?")
+            params.append(description)
+        if group_name is not None:
+            updates.append("group_name = ?")
+            params.append(group_name)
+        if variables is not None:
+            updates.append("variables = ?")
+            params.append(variables)
+            
+        if not updates:
+            return {"status": "success", "message": "Nothing to update"}
+            
+        params.append(id)
+        
+        try:
+            cursor.execute(f"UPDATE schemes SET {', '.join(updates)} WHERE id = ?", params)
+            conn.commit()
+            return {"status": "success", "message": "Scheme updated"}
+        except sqlite3.IntegrityError:
+            raise HTTPException(status_code=409, detail="Scheme name already exists")
+        finally:
+            conn.close()
+            
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+# DELETE /schemes/{id} - 删除方案
+@app.delete("/schemes/{id}")
+async def delete_scheme(id: int):
+    try:
+        db_path = config_loader.db_path
+        conn = sqlite3.connect(db_path)
+        cursor = conn.cursor()
+        
+        # 先删除关联的 items
+        cursor.execute("DELETE FROM scheme_items WHERE scheme_id = ?", (id,))
+        # 再删除 scheme
+        cursor.execute("DELETE FROM schemes WHERE id = ?", (id,))
+        
+        conn.commit()
+        conn.close()
+        
+        return {"status": "success", "message": "Scheme deleted"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+# GET /schemes/{id}/items - 获取方案的所有步骤
+@app.get("/schemes/{id}/items")
+async def get_scheme_items(id: int):
+    try:
+        db_path = config_loader.db_path
+        conn = sqlite3.connect(db_path)
+        conn.row_factory = sqlite3.Row
+        cursor = conn.cursor()
+        
+        # 关联查询模板名称
+        query = """
+        SELECT si.*, t.name as template_name 
+        FROM scheme_items si
+        LEFT JOIN templates t ON si.template_id = t.id
+        WHERE si.scheme_id = ?
+        ORDER BY si.id
+        """
+        cursor.execute(query, (id,))
+        items = [dict(row) for row in cursor.fetchall()]
+        
+        conn.close()
+        
+        return {
+            "status": "success",
+            "data": items
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+# POST /scheme_items - 添加步骤
+@app.post("/scheme_items")
+async def create_scheme_item(request: dict):
+    try:
+        scheme_id = request.get('scheme_id')
+        template_id = request.get('template_id')
+        output_filename_pattern = request.get('output_filename_pattern')
+        output_sub_package = request.get('output_sub_package')
+        
+        if not all([scheme_id, template_id, output_filename_pattern, output_sub_package]):
+             raise HTTPException(status_code=400, detail="Missing required fields")
+
+        db_path = config_loader.db_path
+        conn = sqlite3.connect(db_path)
+        cursor = conn.cursor()
+        
+        cursor.execute(
+            """
+            INSERT INTO scheme_items (scheme_id, template_id, output_filename_pattern, output_sub_package, is_enabled) 
+            VALUES (?, ?, ?, ?, 1)
+            """,
+            (scheme_id, template_id, output_filename_pattern, output_sub_package)
+        )
+        conn.commit()
+        conn.close()
+        
+        return {"status": "success", "message": "Item created"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+# PUT /scheme_items/{id} - 更新步骤
+@app.put("/scheme_items/{id}")
+async def update_scheme_item(id: int, request: dict):
+    try:
+        output_filename_pattern = request.get('output_filename_pattern')
+        output_sub_package = request.get('output_sub_package')
+        is_enabled = request.get('is_enabled')
+        variables = request.get('variables') # Expecting JSON string or dict
+        
+        # If variables is a dict, convert to string
+        if isinstance(variables, dict):
+            variables = json.dumps(variables, ensure_ascii=False)
+        
+        db_path = config_loader.db_path
+        conn = sqlite3.connect(db_path)
+        cursor = conn.cursor()
+        
+        # 动态构建更新语句
+        updates = []
+        params = []
+        if output_filename_pattern is not None:
+            updates.append("output_filename_pattern = ?")
+            params.append(output_filename_pattern)
+        if output_sub_package is not None:
+            updates.append("output_sub_package = ?")
+            params.append(output_sub_package)
+        if is_enabled is not None:
+            updates.append("is_enabled = ?")
+            params.append(is_enabled)
+        if variables is not None:
+            updates.append("variables = ?")
+            params.append(variables)
+            
+        if not updates:
+             return {"status": "success", "message": "Nothing to update"}
+             
+        params.append(id)
+        cursor.execute(f"UPDATE scheme_items SET {', '.join(updates)} WHERE id = ?", params)
+        conn.commit()
+        conn.close()
+        
+        return {"status": "success", "message": "Item updated"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+# DELETE /scheme_items/{id} - 删除步骤
+@app.delete("/scheme_items/{id}")
+async def delete_scheme_item(id: int):
+    try:
+        db_path = config_loader.db_path
+        conn = sqlite3.connect(db_path)
+        cursor = conn.cursor()
+        
+        cursor.execute("DELETE FROM scheme_items WHERE id = ?", (id,))
+        conn.commit()
+        conn.close()
+        
+        return {"status": "success", "message": "Item deleted"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 # 运行 uvicorn 服务器
 if __name__ == "__main__":
     import uvicorn

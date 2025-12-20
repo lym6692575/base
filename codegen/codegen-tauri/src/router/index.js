@@ -19,6 +19,16 @@ const routes = [
     path: '/config-manager',
     name: 'configManager',
     component: () => import('../views/ConfigManagerView.vue')
+  },
+  {
+    path: '/template-manager',
+    name: 'templateManager',
+    component: () => import('../views/TemplateManagerView.vue')
+  },
+  {
+    path: '/scheme-manager',
+    name: 'schemeManager',
+    component: () => import('../views/SchemeManagerView.vue')
   }
 ]
 

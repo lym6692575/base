@@ -84,13 +84,15 @@
 
     <!-- JSON模式 -->
     <div v-else class="json-container">
-      <el-input v-model="jsonFields" type="textarea" :rows="15" placeholder="请输入JSON格式的字段配置"
-        style="font-family: monospace; font-size: 14px;" @input="validateJson"></el-input>
-      <div class="json-help-text">
-        示例：[{"name": "id", "type": "Long", "column": "ID", "id": true, "label": "id"}, {"name": "name", "type":
-        "String",
-        "column": "NAME", "id": false, "label": "名称"}]
-      </div>
+      <el-input 
+        v-model="jsonFields"
+        type="textarea"
+        :rows="25" 
+        placeholder="请输入JSON格式的字段配置"
+        style="font-family: monospace; font-size: 14px;" 
+        @input="validateJson"
+        >
+      </el-input>
     </div>
   </div>
 </template>
@@ -104,10 +106,14 @@ const props = defineProps({
   modelValue: {
     type: Array,
     default: () => []
+  },
+  width: {
+    type: String,
+    default: '800px'
   }
 })
 
-const emit = defineEmits(['update:modelValue'])
+const emit = defineEmits(['update:modelValue', 'update:width'])
 
 // 字段编辑模式：json 或 table
 const fieldMode = ref('json')
@@ -115,41 +121,61 @@ const fieldMode = ref('json')
 const jsonFields = ref('')
 // JSON校验错误
 const jsonError = ref('')
-// 字段数据
-const fields = ref([...props.modelValue])
+
+// 初始化宽度
+if (fieldMode.value === 'table') {
+  // 初始表格模式下宽度改为60%
+  emit('update:width', '60%')
+} else {
+  // 初始JSON模式下宽度改为30%
+  emit('update:width', '30%')
+}
+// 字段数据 - 使用computed避免循环更新
+const fields = computed({
+  get: () => [...props.modelValue],
+  set: (newValue) => {
+    emit('update:modelValue', [...newValue])
+    // 更新JSON内容
+    jsonFields.value = JSON.stringify(newValue, null, 2)
+  }
+})
 
 // 初始化JSON内容
 jsonFields.value = JSON.stringify(fields.value, null, 2)
 
-// 监听modelValue变化，更新表单数据
+// 监听modelValue变化，更新JSON内容
 watch(() => props.modelValue, (newValue) => {
-  fields.value = [...newValue]
-  // 更新JSON内容
-  jsonFields.value = JSON.stringify(fields.value, null, 2)
+  jsonFields.value = JSON.stringify(newValue, null, 2)
 }, { deep: true })
 
-// 监听fields变化，同步到父组件
-watch(fields, (newFields) => {
-  emit('update:modelValue', [...newFields])
-  // 更新JSON内容
-  jsonFields.value = JSON.stringify(newFields, null, 2)
-}, { deep: true })
-
-// 监听fieldMode变化，同步数据
+// 监听fieldMode变化，同步数据和调整宽度
 watch(fieldMode, (newMode, oldMode) => {
+  console.log('fieldMode变化:', newMode, oldMode)
+  // 根据fieldMode动态调整宽度
+  if (newMode === 'table') {
+    // 表格模式下宽度改为60%
+    console.log('切换到表格模式，宽度改为60%')
+    emit('update:width', '60%')
+  } else if (newMode === 'json') {
+    // JSON模式下宽度改为30%
+    emit('update:width', '30%')
+  }
+  
+  // 同步数据
   if (oldMode === 'json' && newMode === 'table') {
     // 从JSON切换到表格，需要验证JSON并同步到fields
     validateJson()
     if (!jsonError.value) {
       try {
-        fields.value = JSON.parse(jsonFields.value)
+        const parsedFields = JSON.parse(jsonFields.value)
+        emit('update:modelValue', parsedFields)
       } catch (e) {
-        fields.value = []
+        emit('update:modelValue', [])
       }
     }
   } else if (oldMode === 'table' && newMode === 'json') {
     // 从表格切换到JSON，同步表格数据到JSON
-    jsonFields.value = JSON.stringify(fields.value, null, 2)
+    jsonFields.value = JSON.stringify(props.modelValue, null, 2)
     jsonError.value = ''
   }
 })
@@ -162,21 +188,21 @@ const validateJson = () => {
   }
 
   try {
-    const fields = JSON.parse(jsonFields.value)
-    if (!Array.isArray(fields)) {
+    const parsedFields = JSON.parse(jsonFields.value)
+    if (!Array.isArray(parsedFields)) {
       jsonError.value = 'JSON必须是数组格式'
       return false
     }
 
     // 验证每个字段的必填项
-    const invalidField = fields.find(field => !field.name || !field.type)
+    const invalidField = parsedFields.find(field => !field.name || !field.type)
     if (invalidField) {
       jsonError.value = '每个字段必须包含name和type属性'
       return false
     }
 
-    // 同步到fields
-    emit('update:modelValue', fields)
+    // 只有在JSON模式切换到表格模式时才更新fields
+    // 避免input事件触发时的循环更新
     jsonError.value = ''
     return true
   } catch (e) {
@@ -187,18 +213,22 @@ const validateJson = () => {
 
 // 添加字段
 const addField = () => {
-  fields.value.push({
+  const newFields = [...props.modelValue]
+  newFields.push({
     name: '',
     type: 'String',
     column: '',
     id: false,
     label: ''
   })
+  emit('update:modelValue', newFields)
 }
 
 // 删除字段
 const removeField = (index) => {
-  fields.value.splice(index, 1)
+  const newFields = [...props.modelValue]
+  newFields.splice(index, 1)
+  emit('update:modelValue', newFields)
 }
 
 // 导出JSON
@@ -275,11 +305,6 @@ const copyJson = () => {
 
 .fields-container .el-button {
   margin-bottom: 15px;
-}
-
-/* JSON模式样式 */
-.json-container {
-  margin-top: 10px;
 }
 
 .json-help-text {

@@ -4,12 +4,9 @@ version = "0.1.0"
 description = "Python版本的代码生成器，用于生成Java代码"
 readme = "README.md"
 authors = [
-    {
-        "name" = "Code Generator Team",
-        "email" = ""
-    }
+    { name = "LittleLee" }
 ]
-license = {"text" = "MIT"}
+license = "MIT"
 requires-python = ">=3.8"
 dependencies = [
     "jinja2>=3.0.0",
@@ -18,12 +15,15 @@ dependencies = [
 ]
 
 [project.urls]
-"Homepage" = "https://github.com/codegen-tool-py"
-"Repository" = "https://github.com/codegen-tool-py"
+Homepage = "https://github.com/codegen-tool-py"
+Repository = "https://github.com/codegen-tool-py"
 
 [build-system]
 requires = ["setuptools>=64.0.0", "wheel"]
 build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+exclude = ["output"]
 
 [project.scripts]
 codegen = "codegen_runner:main"

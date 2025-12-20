@@ -6,11 +6,21 @@
         <div>
           <el-divider>包配置</el-divider>
           <el-form ref="formRef" :model="formData" label-width="120px" style="margin-top: 20px;">
-            <el-form-item label="包基础路径">
-              <el-input v-model="formData.packageBase" placeholder="请输入包基础路径"></el-input>
-            </el-form-item>
-            <el-form-item label="模块">
-              <el-input v-model="formData.module" placeholder="请输入模块名"></el-input>
+            <el-form-item label="生成方案">
+              <el-select v-model="formData.scheme_id" placeholder="请选择生成方案" style="width: 100%">
+                <el-option-group
+                  v-for="(schemes, group) in groupedSchemes"
+                  :key="group"
+                  :label="group"
+                >
+                  <el-option 
+                    v-for="scheme in schemes" 
+                    :key="scheme.id" 
+                    :label="scheme.name" 
+                    :value="scheme.id" 
+                  />
+                </el-option-group>
+              </el-select>
             </el-form-item>
             <el-form-item label="实体名称">
               <el-input v-model="formData.entityName" placeholder="请输入实体名称"></el-input>
@@ -34,26 +44,19 @@
             <el-form-item v-if="formData.mapping === 'SUBSELECT'" label="子查询">
               <el-input v-model="formData.subselect" type="textarea" :rows="3" placeholder="请输入子查询语句"></el-input>
             </el-form-item>
+            <el-form-item label="包基础路径">
+              <el-input v-model="formData.packageBase" placeholder="请输入包基础路径"></el-input>
+            </el-form-item>
+            <el-form-item label="模块名">
+              <el-input v-model="formData.module" placeholder="请输入模块名"></el-input>
+            </el-form-item>
             <el-form-item label="输出目录">
-              <el-input v-model="formData.outputDir" placeholder="请输入输出目录"></el-input>
-            </el-form-item>
-            <el-divider>基础类配置</el-divider>
-            <el-form-item label="实体基类">
-              <el-input v-model="formData.entityBaseClass" placeholder="请输入实体基类"></el-input>
-            </el-form-item>
-            <el-form-item label="DTO基类">
-              <el-input v-model="formData.dtoBaseClass" placeholder="请输入DTO基类"></el-input>
-            </el-form-item>
-            <el-form-item label="Mapper基类">
-              <el-input v-model="formData.mapperBaseClass" placeholder="请输入Mapper基类"></el-input>
-            </el-form-item>
-            <el-form-item label="Service基类">
-              <el-input v-model="formData.serviceBaseClass" placeholder="请输入Service基类"></el-input>
-            </el-form-item>
-            <el-form-item label="ServiceImpl基类">
-              <el-input v-model="formData.serviceImplBaseClass" placeholder="请输入ServiceImpl基类"></el-input>
+              <el-input v-model="formData.outputDir" placeholder="请输入代码生成的基础输出目录"></el-input>
             </el-form-item>
           </el-form>
+
+          <!-- 字段配置 -->
+          <el-divider>字段配置</el-divider>
         </div>
       </el-col>
     </div>
@@ -67,10 +70,11 @@
 </template>
 
 <script setup>
-import { ref, watch } from 'vue'
+import { ref, watch, onMounted, computed } from 'vue'
 import { ElMessage } from 'element-plus'
 import { EditPen, ArrowLeft, ArrowRight, Close } from '@element-plus/icons-vue'
 import FieldConfig from './FieldConfig.vue'
+import { useSchemeStore } from '../store/scheme'
 
 const props = defineProps({
   modelValue: {
@@ -90,6 +94,7 @@ const props = defineProps({
       mapperBaseClass: '',
       serviceBaseClass: '',
       serviceImplBaseClass: '',
+      scheme_id: null,
       fields: []
     })
   },
@@ -101,11 +106,30 @@ const props = defineProps({
 
 const emit = defineEmits(['update:modelValue', 'save', 'cancel', 'update:drawerSize'])
 
+const schemeStore = useSchemeStore()
+const schemeList = computed(() => schemeStore.schemeList)
+
+// Group schemes for select
+const groupedSchemes = computed(() => {
+    const groups = {}
+    schemeList.value.forEach(scheme => {
+        const group = scheme.group_name || 'Default'
+        if (!groups[group]) groups[group] = []
+        groups[group].push(scheme)
+    })
+    return groups
+})
+
 const formRef = ref(null)
 const formData = ref({ ...props.modelValue })
 const isExpanded = ref(false)
 const drawerVisible = ref(false)
 const drawerSize = ref('30%')
+
+// Load schemes on mount
+onMounted(async () => {
+    await schemeStore.loadAllSchemes()
+})
 
 // 确保fields是数组
 if (!Array.isArray(formData.value.fields)) {

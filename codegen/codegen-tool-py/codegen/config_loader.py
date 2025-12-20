@@ -107,9 +107,11 @@ class ConfigLoader:
                             name = str(field.get('name', ''))
                             type_ = str(field.get('type', 'String'))
                             column = str(field.get('column', name))
-                            id_ = str(field.get('id', False))
+                            id_ = field.get('id', False)
                             label = str(field.get('label', name))
-                            parts.append(f"{name}:{type_}:{column}:{id_}:{label}")
+                            # id字段如果为False不返回id这个字段
+                            id_str = str(id_) if id_ else ''
+                            parts.append(f"{name}:{type_}:{column}:{id_str}:{label}")
                     config_dict['fields'] = ';'.join(parts)
                 else:
                     config_dict[key] = str(value)
@@ -143,7 +145,7 @@ class ConfigLoader:
             SELECT 
                 id, package_base, module, entity_name, id_type, mapping, table_name, subselect, 
                 output_dir, templates_dir, entity_base_class, dto_base_class, mapper_base_class, 
-                service_base_class, service_impl_base_class
+                service_base_class, service_impl_base_class, scheme_id
             FROM config WHERE id = ?
             ''', (config_id,))
             
@@ -167,7 +169,8 @@ class ConfigLoader:
                 'dtoBaseClass': config_row[11],
                 'mapperBaseClass': config_row[12],
                 'serviceBaseClass': config_row[13],
-                'serviceImplBaseClass': config_row[14]
+                'serviceImplBaseClass': config_row[14],
+                'scheme_id': config_row[15]
             }
             
             # 查询字段
@@ -179,13 +182,17 @@ class ConfigLoader:
             fields = cursor.fetchall()
             fields_list = []
             for field in fields:
-                fields_list.append({
+                field_dict = {
                     'name': field[0] or '',
                     'type': field[1] or 'String',
                     'column': field[2] or (field[0] or ''),
-                    'id': bool(field[3] or False),
                     'label': field[4] or (field[0] or '')
-                })
+                }
+                # 只有当is_id为1（True）时，才添加id字段
+                is_id = bool(field[3] or False)
+                if is_id:
+                    field_dict['id'] = is_id
+                fields_list.append(field_dict)
             
             config_dict['fields'] = fields_list
             
@@ -231,7 +238,8 @@ class ConfigLoader:
                     dto_base_class = ?, 
                     mapper_base_class = ?, 
                     service_base_class = ?, 
-                    service_impl_base_class = ?
+                    service_impl_base_class = ?,
+                    scheme_id = ?
                 WHERE id = ?
                 ''', (
                     config_dict.get('packageBase'),
@@ -248,6 +256,7 @@ class ConfigLoader:
                     config_dict.get('mapperBaseClass'),
                     config_dict.get('serviceBaseClass'),
                     config_dict.get('serviceImplBaseClass'),
+                    config_dict.get('scheme_id'),
                     config_id
                 ))
                 
@@ -259,8 +268,8 @@ class ConfigLoader:
                 INSERT INTO config (
                     package_base, module, entity_name, id_type, mapping, table_name, subselect, 
                     output_dir, templates_dir, entity_base_class, dto_base_class, mapper_base_class, 
-                    service_base_class, service_impl_base_class
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    service_base_class, service_impl_base_class, scheme_id
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ''', (
                     config_dict.get('packageBase'),
                     config_dict.get('module'),
@@ -275,7 +284,8 @@ class ConfigLoader:
                     config_dict.get('dtoBaseClass'),
                     config_dict.get('mapperBaseClass'),
                     config_dict.get('serviceBaseClass'),
-                    config_dict.get('serviceImplBaseClass')
+                    config_dict.get('serviceImplBaseClass'),
+                    config_dict.get('scheme_id')
                 ))
                 
                 config_id = cursor.lastrowid

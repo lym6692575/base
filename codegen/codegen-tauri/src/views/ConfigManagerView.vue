@@ -65,11 +65,11 @@
     <el-drawer
       v-model="fieldEditorVisible"
       title="字段配置"
-      width="800px"
+      :width="drawerWidth"
       destroy-on-close
     >
       <div v-if="fieldEditingConfig" class="field-editor-container">
-        <FieldConfig v-model="fieldEditingConfig.fields" />
+        <FieldConfig v-model="fieldEditingConfig.fields" v-model:width="drawerWidth" />
       </div>
       <template #footer>
         <div class="dialog-footer">
@@ -95,6 +95,8 @@ const fieldEditorVisible = ref(false)
 const generateLog = ref('')
 const fieldEditingConfig = ref(null) // 用于字段编辑的配置
 const configFormRef = ref(null) // 定义组件引用
+// 抽屉宽度配置 - 默认30%
+const drawerWidth = ref('30%')
 
 // 从store获取状态
 const configList = computed(() => configStore.configList)
@@ -241,10 +243,12 @@ const handleGenerate = async () => {
       ElMessage.success('代码生成成功')
     } else {
       generateLog.value += `代码生成失败：${result.message}\n`
+      generateLog.value += `输出信息：${result.output}\n`
       ElMessage.error('代码生成失败')
     }
   } catch (error) {
     generateLog.value += `代码生成失败：${error.message}\n`
+    generateLog.value += `输出信息：${result.output}\n`
     ElMessage.error('代码生成失败')
   }
 }

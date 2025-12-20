@@ -6,12 +6,96 @@
 """
 
 from pathlib import Path
-from codegen.generators.entity_generator import EntityGenerator
-from codegen.generators.dto_generator import DtoGenerator
-from codegen.generators.mapper_generator import MapperGenerator
-from codegen.generators.repository_generator import RepositoryGenerator
-from codegen.generators.service_generator import ServiceGenerator
-from codegen.generators.service_impl_generator import ServiceImplGenerator
+import sqlite3
+import json
+from codegen.generators.base_generator import BaseGenerator
+
+import re
+
+class SchemeGenerator(BaseGenerator):
+    """基于Scheme的通用生成器"""
+    
+    def __init__(self, code_generator, scheme_item, scheme_variables):
+        super().__init__(code_generator)
+        self.scheme_item = scheme_item
+        self.scheme_variables = scheme_variables
+        
+        # 解析 Item 级变量 (并处理引用)
+        self.item_variables = self._parse_item_variables(scheme_item.get('variables'), scheme_variables)
+        
+    def _parse_item_variables(self, variables_json, scheme_variables):
+        """
+        解析 Item 变量，支持 ${GlobalVar} 引用
+        """
+        if not variables_json:
+            return {}
+        
+        try:
+            vars_dict = json.loads(variables_json) if isinstance(variables_json, str) else variables_json
+            result = {}
+            
+            for key, value in vars_dict.items():
+                if isinstance(value, str) and value.startswith('${') and value.endswith('}'):
+                    # 这是一个引用，例如 ${DefaultBase}
+                    ref_key = value[2:-1]
+                    # 从 Scheme 全局变量中查找，找不到则保留原值或为空
+                    result[key] = scheme_variables.get(ref_key, value)
+                else:
+                    # 普通值
+                    result[key] = value
+            return result
+        except Exception as e:
+            print(f"Error parsing item variables: {e}")
+            return {}
+
+    def generate(self):
+        # 1. 准备上下文
+        # 核心上下文 (运行时)
+        context = {
+            'package': self.get_full_package(self.scheme_item['output_sub_package']),
+            'entity_name': self.code_generator.entity_name,
+            'id_type': self.code_generator.id_type,
+            'table_name': self.code_generator.table_name,
+            'subselect': self.code_generator.subselect,
+            'mapping': self.code_generator.mapping,
+            'fields': self.code_generator.fields,
+            
+            # 辅助变量
+            'entity_package': self.get_full_package('entity'),
+            'dto_package': self.get_full_package('dto'),
+            'mapper_package': self.get_full_package('mapper'),
+            'repository_package': self.get_full_package('repository'),
+            'service_package': self.get_full_package('service')
+        }
+        
+        # 2. 注入变量
+        # 优先级：Config (覆盖) > Item Variables (映射后) > Scheme Variables (全局)
+        
+        # 先注入全局变量作为默认值 (可选，为了兼容旧模板可以直接用全局变量名)
+        context.update(self.scheme_variables)
+        
+        # 再注入 Item 映射后的变量 (这是核心推荐用法)
+        context.update(self.item_variables)
+        
+        # 最后注入 Config 里的覆盖值 (如果有)
+        # 这一步稍微复杂点，因为 Config 目前没有通用的 variables 字段，
+        # 但如果以后加了，应该在这里合并。
+        # 目前 Config 里只有 entityBaseClass 等旧字段，为了兼容性可以手动映射一下
+        # 但为了推行新模式，建议这里只保留 Item Variables
+        
+        # 3. 渲染模板
+        template_id = str(self.scheme_item['template_id'])
+        content = self.render_template(template_id, context)
+        
+        # 4. 计算输出路径
+        filename = self.scheme_item['output_filename_pattern'].replace('{EntityName}', self.code_generator.entity_name)
+        output_dir = self.code_generator.get_output_path(self.scheme_item['output_sub_package'])
+        self.output_path = output_dir / filename
+        
+        # 5. 写入文件
+        self.write_file(self.output_path, content)
+        
+        return self.output_path
 
 class CodeGenerator:
     """代码生成器核心类"""
@@ -35,23 +119,17 @@ class CodeGenerator:
         self.table_name = config_dict.get('tableName', '')
         self.subselect = config_dict.get('subselect', '')
         self.output_dir = config_dict.get('outputDir', '.')
-        self.templates_dir = config_dict.get('templatesDir', '')
+        self.scheme_id = config_dict.get('scheme_id')
         
         # 解析字段定义
         self.fields = self._parse_fields(config_dict.get('fields', ''))
         
-        # 初始化生成器
-        self.generators = []
-        self._init_generators()
-    
     def _parse_fields(self, fields_input):
         """
         解析字段定义
         
         Args:
             fields_input: 字段定义，可以是列表或字符串
-                         - 列表格式: [{"name": "id", "type": "Long", "column": "ID", "id": true, "label": "id"}, ...]
-                         - 字符串格式: "name:type:column:id:label;name2:type2:column2:id2:label2"
             
         Returns:
             字段定义列表
@@ -94,39 +172,62 @@ class CodeGenerator:
         
         return fields
     
-    def _init_generators(self):
-        """初始化各种生成器"""
-        # 实体生成器
-        self.generators.append(EntityGenerator(self))
-        
-        # DTO生成器
-        self.generators.append(DtoGenerator(self))
-        
-        # Mapper生成器
-        self.generators.append(MapperGenerator(self))
-        
-        # Repository生成器
-        self.generators.append(RepositoryGenerator(self))
-        
-        # Service生成器
-        self.generators.append(ServiceGenerator(self))
-        
-        # ServiceImpl生成器
-        self.generators.append(ServiceImplGenerator(self))
-    
     def generate(self):
         """
-        执行代码生成
+        执行代码生成 (基于 Scheme)
         """
-        for generator in self.generators:
-            try:
-                generator.generate()
-                # 保存主实体路径
-                if isinstance(generator, EntityGenerator):
-                    self.main_entity_path = generator.output_path
-            except Exception as e:
-                print(f"生成 {generator.__class__.__name__} 时出错: {str(e)}")
-                raise
+        if not self.scheme_id:
+            print("Warning: No scheme_id provided, skipping generation.")
+            return
+
+        # 1. 从数据库加载 Scheme Items 和 Scheme Variables
+        db_path = Path(__file__).parent / 'dataBase' / 'codegen.db'
+        conn = sqlite3.connect(db_path)
+        conn.row_factory = sqlite3.Row # 允许通过列名访问
+        cursor = conn.cursor()
+        
+        try:
+            # 获取 Scheme 信息（包括变量）
+            cursor.execute("SELECT variables FROM schemes WHERE id = ?", (self.scheme_id,))
+            scheme_row = cursor.fetchone()
+            scheme_variables = {}
+            if scheme_row and scheme_row['variables']:
+                try:
+                    scheme_variables = json.loads(scheme_row['variables'])
+                except json.JSONDecodeError:
+                    print("Warning: Failed to parse scheme variables JSON")
+
+            # 获取 Items
+            cursor.execute(
+                "SELECT * FROM scheme_items WHERE scheme_id = ? AND is_enabled = 1",
+                (self.scheme_id,)
+            )
+            items = cursor.fetchall()
+            
+            if not items:
+                print(f"Warning: No enabled items found for scheme_id {self.scheme_id}")
+                return
+
+            print(f"Found {len(items)} generation tasks in scheme.")
+
+            # 2. 遍历执行生成
+            for item in items:
+                try:
+                    # 将 sqlite3.Row 转换为字典
+                    item_dict = dict(item)
+                    generator = SchemeGenerator(self, item_dict, scheme_variables)
+                    output_path = generator.generate()
+                    
+                    # 简单判断是否是主实体 (仅用于日志)
+                    if 'entity' in item_dict['output_sub_package'].lower() and not 'dto' in item_dict['output_sub_package'].lower():
+                        self.main_entity_path = output_path
+                        
+                except Exception as e:
+                    print(f"Error generating item {item_dict.get('output_filename_pattern')}: {str(e)}")
+                    # 此时可以选择抛出异常终止，或者继续生成其他文件
+                    # raise e 
+        finally:
+            conn.close()
     
     def get_package_path(self, subpackage=''):
         """

@@ -2,7 +2,7 @@
 import { ref } from 'vue'
 import { useRoute } from 'vue-router'
 // 导入Element Plus图标
-import { House, InfoFilled, Cpu, ArrowRight, ArrowLeft, User, CaretBottom } from '@element-plus/icons-vue'
+import { House, InfoFilled, Cpu, ArrowRight, ArrowLeft, User, CaretBottom, Document } from '@element-plus/icons-vue'
 
 const route = useRoute()
 const isCollapse = ref(false)
@@ -18,6 +18,16 @@ const menuItems = [
     index: '/config-manager',
     title: '配置管理',
     icon: InfoFilled
+  },
+  {
+    index: '/template-manager',
+    title: '模板管理',
+    icon: Document
+  },
+  {
+    index: '/scheme-manager',
+    title: '方案管理',
+    icon: Cpu
   },
   {
     index: '/about',

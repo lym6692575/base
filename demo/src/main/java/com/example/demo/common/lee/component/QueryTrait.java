@@ -109,7 +109,24 @@ public interface QueryTrait<E, D, ID> extends BaseTrait<E, D, ID> {
     }
 
     // --- 核心动态查询逻辑 (迁移自 BasicServiceImpl) ---
-
+    /**
+     * 根据传入的查询键和值，动态生成 JPA 谓词并加入到谓词列表。
+     *
+     * 支持以下特性：
+     * - 内置键：`id`（IN/等值）、`creatorId`、软删除标识（当实体支持软删除时）
+     * - 注解驱动：若实体字段标注了 {@link QueryField}，
+     *   将按其 {@code operator/ignoreCase/alias} 配置生成条件；未标注则默认 EQ 精确匹配
+     * - 键匹配：既支持实体字段名，也支持 `@Column(name)` 指定的列名（大小写不敏感）
+     * - 支持的操作符：EQ, LIKE, IN, GT, GE, LT, LE, BETWEEN, STARTS_WITH, ENDS_WITH
+     *
+     * @param predicates      谓词列表
+     * @param query           CriteriaQuery，用于创建子查询
+     * @param root            实体的根引用
+     * @param cb              条件构造器
+     * @param key             查询键（字段名或列名）
+     * @param value           查询值（不同操作符对值的类型要求不同）
+     * @param params          其他参数
+     */
     default void addPredicate(List<Predicate> predicates, CriteriaQuery<?> query, Root<E> root, CriteriaBuilder cb, String key, Object value, Map<String, Object> params) {
         if (value == null) {
             return;
