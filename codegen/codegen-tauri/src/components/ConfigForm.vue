@@ -54,9 +54,6 @@
               <el-input v-model="formData.outputDir" placeholder="请输入代码生成的基础输出目录"></el-input>
             </el-form-item>
           </el-form>
-
-          <!-- 字段配置 -->
-          <el-divider>字段配置</el-divider>
         </div>
       </el-col>
     </div>
