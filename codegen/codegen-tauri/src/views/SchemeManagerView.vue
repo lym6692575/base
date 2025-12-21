@@ -54,6 +54,10 @@
                   @click="handleAddStep"
                 >添加步骤</el-button>
                  <el-button 
+                  type="success" 
+                  @click="handleImportSteps"
+                >导入步骤</el-button>
+                 <el-button 
                   type="danger" 
                   @click="handleDeleteScheme"
                 >删除方案</el-button>
@@ -84,7 +88,11 @@
               <el-divider content-position="left">生成步骤</el-divider>
               
               <el-table :data="schemeItems" style="width: 100%" v-loading="loading">
-                  <el-table-column prop="template_name" label="使用模板" width="180" />
+                  <el-table-column label="使用模板" width="180">
+                      <template #default="scope">
+                          <el-link type="primary" @click="handlePreviewTemplate(scope.row.template_id)">{{ scope.row.template_name }}</el-link>
+                      </template>
+                  </el-table-column>
                   <el-table-column prop="output_filename_pattern" label="输出文件名" />
                   <el-table-column prop="output_sub_package" label="输出子包" />
                   <el-table-column label="状态" width="100">
@@ -134,9 +142,12 @@
     </el-dialog>
 
     <!-- Global Variables Dialog -->
-    <el-dialog v-model="variablesDialogVisible" title="全局变量配置" width="700px">
-        <div class="help-text" style="margin-bottom: 10px;">
-            定义方案级别的全局变量（如基类路径、公共常量等），可在具体步骤中通过 ${VarName} 引用。
+    <el-dialog v-model="variablesDialogVisible" title="全局变量配置" width="800px">
+        <div class="help-text" style="margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center;">
+            <span>定义方案级别的全局变量（如基类路径、公共常量等），可在具体步骤中通过 ${VarName} 引用。</span>
+            <el-button type="primary" link @click="handleEditVariablesJson">
+                JSON 编辑
+            </el-button>
         </div>
         
         <el-table :data="schemeVariablesList" style="width: 100%" border size="small">
@@ -171,8 +182,8 @@
 
     <!-- Item Dialog -->
     <el-dialog v-model="itemDialogVisible" :title="itemForm.id ? '编辑步骤' : '添加步骤'" width="700px">
-        <el-form :model="itemForm" label-width="120px">
-            <el-form-item label="选择模板">
+        <el-form :model="itemForm" label-width="120px" :rules="itemRules" ref="itemFormRef">
+            <el-form-item label="选择模板" prop="template_id">
                 <el-select v-model="itemForm.template_id" placeholder="请选择模板" style="width: 100%" :disabled="!!itemForm.id" filterable>
                     <el-option-group
                       v-for="(templates, type) in groupedTemplates"
@@ -188,7 +199,7 @@
                     </el-option-group>
                 </el-select>
             </el-form-item>
-            <el-form-item label="输出文件名">
+            <el-form-item label="输出文件名" prop="output_filename_pattern">
                 <el-input v-model="itemForm.output_filename_pattern" placeholder="例如: {EntityName}Service.java" />
                 <div class="help-text">支持变量: {EntityName}</div>
             </el-form-item>
@@ -249,6 +260,104 @@
                 <el-button type="primary" @click="submitItem">确定</el-button>
             </span>
         </template>
+    </el-dialog>
+    <!-- Template Preview Dialog -->
+    <el-dialog v-model="previewDialogVisible" title="模板预览" width="800px">
+        <div v-loading="previewLoading">
+            <el-descriptions border :column="1" size="small" style="margin-bottom: 15px">
+                <el-descriptions-item label="模板名称">{{ previewTemplate.name }}</el-descriptions-item>
+                <el-descriptions-item label="模板类型">{{ previewTemplate.type || '未分类' }}</el-descriptions-item>
+                <el-descriptions-item label="描述">{{ previewTemplate.description || '无' }}</el-descriptions-item>
+            </el-descriptions>
+            <el-input
+                v-model="previewTemplate.content"
+                type="textarea"
+                :rows="20"
+                readonly
+                class="preview-content"
+            />
+        </div>
+        <template #footer>
+            <span class="dialog-footer">
+                <el-button @click="previewDialogVisible = false">关闭</el-button>
+            </span>
+        </template>
+    </el-dialog>
+
+    <!-- JSON Edit Dialog -->
+    <el-dialog v-model="jsonEditVisible" title="JSON 编辑" width="600px">
+        <el-input
+            v-model="jsonContent"
+            type="textarea"
+            :rows="15"
+            placeholder="请输入 JSON 内容"
+        />
+        <template #footer>
+            <span class="dialog-footer">
+                <el-button @click="jsonEditVisible = false">取消</el-button>
+                <el-button type="primary" @click="submitJsonEdit">确定</el-button>
+            </span>
+        </template>
+    </el-dialog>
+
+    <!-- Import Steps Dialog -->
+    <el-dialog v-model="importStepsVisible" title="导入步骤" width="800px">
+        <el-tabs v-model="importActiveTab">
+            <!-- Tab 1: From Scheme -->
+            <el-tab-pane label="从其他方案导入" name="scheme">
+                <el-form label-width="100px">
+                    <el-form-item label="选择来源方案">
+                        <el-select v-model="sourceSchemeId" placeholder="请选择来源方案" style="width: 100%" @change="handleSourceSchemeChange">
+                            <el-option
+                                v-for="scheme in schemeList.filter(s => s.id !== currentScheme?.id)"
+                                :key="scheme.id"
+                                :label="scheme.name"
+                                :value="scheme.id"
+                            />
+                        </el-select>
+                    </el-form-item>
+                </el-form>
+                
+                <el-table 
+                    ref="sourceItemsTableRef"
+                    :data="sourceSchemeItems" 
+                    style="width: 100%; margin-top: 10px;" 
+                    height="400"
+                    @selection-change="handleSelectionChange"
+                    v-loading="importLoading"
+                >
+                    <el-table-column type="selection" width="55" />
+                    <el-table-column prop="template_name" label="模板" width="150" />
+                    <el-table-column prop="output_filename_pattern" label="输出文件名" />
+                    <el-table-column prop="output_sub_package" label="输出子包" />
+                </el-table>
+                
+                <div style="margin-top: 15px; text-align: right;">
+                    <el-button @click="importStepsVisible = false">取消</el-button>
+                    <el-button type="primary" @click="submitImportFromScheme" :disabled="selectedSourceItems.length === 0">导入选中步骤</el-button>
+                </div>
+            </el-tab-pane>
+            
+            <!-- Tab 2: JSON Import/Export -->
+            <el-tab-pane label="JSON 导入/导出" name="json">
+                 <div class="help-text" style="margin-bottom: 10px;">
+                    您可以复制下方的 JSON 分享给他人，或粘贴 JSON 导入步骤。
+                </div>
+                <el-input
+                    v-model="importJsonContent"
+                    type="textarea"
+                    :rows="15"
+                    placeholder="在此粘贴步骤 JSON..."
+                />
+                 <div style="margin-top: 15px; display: flex; justify-content: space-between;">
+                    <el-button @click="copyCurrentStepsJson">复制当前步骤 JSON</el-button>
+                    <div>
+                        <el-button @click="importStepsVisible = false">取消</el-button>
+                        <el-button type="primary" @click="submitImportFromJson">导入 JSON</el-button>
+                    </div>
+                </div>
+            </el-tab-pane>
+        </el-tabs>
     </el-dialog>
   </div>
 </template>
@@ -312,7 +421,33 @@ const itemForm = ref({
     output_filename_pattern: '',
     output_sub_package: ''
 })
+const itemFormRef = ref(null)
+const itemRules = {
+    template_id: [
+        { required: true, message: '请选择模板', trigger: 'change' }
+    ],
+    output_filename_pattern: [
+        { required: true, message: '请输入输出文件名', trigger: 'blur' }
+    ]
+}
 const itemVariablesList = ref([]) // Array of { key: '', value: '' }
+
+const previewDialogVisible = ref(false)
+const previewLoading = ref(false)
+const previewTemplate = ref({})
+
+const jsonEditVisible = ref(false)
+const jsonContent = ref('')
+
+// Import Steps Logic
+const importStepsVisible = ref(false)
+const importActiveTab = ref('scheme')
+const sourceSchemeId = ref(null)
+const sourceSchemeItems = ref([])
+const selectedSourceItems = ref([])
+const importJsonContent = ref('')
+const importLoading = ref(false)
+const sourceItemsTableRef = ref(null)
 
 onMounted(async () => {
   await schemeStore.loadAllSchemes()
@@ -401,11 +536,21 @@ const submitVariables = async () => {
 const submitScheme = async () => {
     if (!schemeForm.value.name) return ElMessage.warning('请输入名称')
     
+    const normalizeVariablesForApi = (val) => {
+        if (val == null) return '{}'
+        if (typeof val === 'string') return val
+        try {
+            return JSON.stringify(val)
+        } catch (e) {
+            return '{}'
+        }
+    }
+    
     const payload = {
         name: schemeForm.value.name,
         description: schemeForm.value.description,
         group_name: schemeForm.value.group_name,
-        variables: schemeForm.value.variables // Pass through
+        variables: normalizeVariablesForApi(schemeForm.value.variables)
     }
 
     if (schemeForm.value.id) {
@@ -477,42 +622,45 @@ const removeItemVariable = (index) => {
 }
 
 const submitItem = async () => {
-    if (!itemForm.value.template_id) return ElMessage.warning('请选择模板')
-    if (!itemForm.value.output_filename_pattern) return ElMessage.warning('请输入输出文件名')
+    if (!itemFormRef.value) return
     
-    // Serialize variables
-    const vars = {}
-    itemVariablesList.value.forEach(item => {
-        if (item.key) vars[item.key] = item.value
+    await itemFormRef.value.validate(async (valid) => {
+        if (valid) {
+            // Serialize variables
+            const vars = {}
+            itemVariablesList.value.forEach(item => {
+                if (item.key) vars[item.key] = item.value
+            })
+            
+            const payload = {
+                template_id: itemForm.value.template_id,
+                output_filename_pattern: itemForm.value.output_filename_pattern,
+                output_sub_package: itemForm.value.output_sub_package,
+                variables: JSON.stringify(vars)
+            }
+            
+            if (itemForm.value.id) {
+                // Update
+                const success = await schemeStore.updateSchemeItem(itemForm.value.id, payload)
+                if (success) {
+                    ElMessage.success('更新成功')
+                    itemDialogVisible.value = false
+                    await schemeStore.loadSchemeItems(currentScheme.value.id)
+                }
+            } else {
+                // Create
+                const createPayload = {
+                    scheme_id: currentScheme.value.id,
+                    ...payload
+                }
+                const success = await schemeStore.createSchemeItem(createPayload)
+                if (success) {
+                    ElMessage.success('添加成功')
+                    itemDialogVisible.value = false
+                }
+            }
+        }
     })
-    
-    const payload = {
-        template_id: itemForm.value.template_id,
-        output_filename_pattern: itemForm.value.output_filename_pattern,
-        output_sub_package: itemForm.value.output_sub_package,
-        variables: JSON.stringify(vars)
-    }
-    
-    if (itemForm.value.id) {
-        // Update
-        const success = await schemeStore.updateSchemeItem(itemForm.value.id, payload)
-        if (success) {
-            ElMessage.success('更新成功')
-            itemDialogVisible.value = false
-            await schemeStore.loadSchemeItems(currentScheme.value.id)
-        }
-    } else {
-        // Create
-        const createPayload = {
-            scheme_id: currentScheme.value.id,
-            ...payload
-        }
-        const success = await schemeStore.createSchemeItem(createPayload)
-        if (success) {
-            ElMessage.success('添加成功')
-            itemDialogVisible.value = false
-        }
-    }
 }
 
 const handleDeleteItem = async (row) => {
@@ -528,8 +676,183 @@ const handleToggleStatus = async (row, val) => {
     ElMessage.success(val ? '已启用' : '已禁用')
 }
 
+const handlePreviewTemplate = async (templateId) => {
+    previewDialogVisible.value = true
+    previewLoading.value = true
+    try {
+        // Find in store first
+        let tpl = templateList.value.find(t => t.id === templateId)
+        
+        // Use loadTemplateById from store to ensure we get full content
+        const result = await templateStore.loadTemplateById(templateId)
+        if (result) {
+            previewTemplate.value = result
+        } else if (tpl) {
+             previewTemplate.value = tpl
+        }
+    } catch (e) {
+        ElMessage.error('加载模板失败')
+    } finally {
+        previewLoading.value = false
+    }
+}
+
 // Suggestion logic for autocomplete
 // Removed as we use Select now
+
+const handleEditVariablesJson = () => {
+    const vars = {}
+    schemeVariablesList.value.forEach(item => {
+        if (item.key) vars[item.key] = item.value
+    })
+    jsonContent.value = JSON.stringify(vars, null, 4)
+    jsonEditVisible.value = true
+}
+
+const submitJsonEdit = () => {
+    try {
+        const vars = JSON.parse(jsonContent.value)
+        if (typeof vars !== 'object' || vars === null) {
+            ElMessage.error('JSON 格式错误：必须是对象')
+            return
+        }
+        
+        schemeVariablesList.value = Object.entries(vars).map(([k, v]) => ({ 
+            key: k, 
+            value: typeof v === 'string' ? v : JSON.stringify(v) 
+        }))
+        jsonEditVisible.value = false
+        ElMessage.success('JSON 解析成功，请点击“保存变量”以生效')
+    } catch (e) {
+        ElMessage.error('JSON 解析失败：' + e.message)
+    }
+}
+
+// --- Import Steps Implementation ---
+
+const handleImportSteps = () => {
+    importStepsVisible.value = true
+    importActiveTab.value = 'scheme'
+    sourceSchemeId.value = null
+    sourceSchemeItems.value = []
+    selectedSourceItems.value = []
+    importJsonContent.value = ''
+}
+
+const handleSourceSchemeChange = async (schemeId) => {
+    if (!schemeId) {
+        sourceSchemeItems.value = []
+        return
+    }
+    
+    importLoading.value = true
+    try {
+        // Use api directly or store method to get items without affecting current view
+        // store.loadSchemeItems updates currentSchemeItems, which we don't want.
+        // So we need a new action or reuse api directly. 
+        // Let's use the API directly for safety, imported at top? 
+        // No, let's add a method to store to fetch items without setting state, or use a separate state.
+        // Actually, looking at store/scheme.js, loadSchemeItems updates state.
+        // We can just call the API service directly here if we import it, or add a store action "fetchSchemeItems".
+        // Let's assume we can import api here.
+        // But importing api in view is mixing layers.
+        // Better: add `getSchemeItems` action to store that returns data instead of setting state.
+        
+        // Let's quickly check store/scheme.js content again via tool? 
+        // I recall it has loadSchemeItems.
+        // I will add a temporary fetch in store or just use the existing load but save/restore state? No that's hacky.
+        // I'll add a simple fetch action to scheme store later if needed.
+        // For now, I'll use the fact that I can't easily modify store file without another tool call.
+        // Wait, I can modify store file.
+        // But for now, let's use a workaround: The store has `apiGetSchemeItems` imported. 
+        // I can just import it here too? No, not good practice.
+        // I'll use a new action in the store.
+        
+        // Actually, let's just add the action to store first.
+        // But I need to write this file first. 
+        // Let's implement the logic assuming the store action `fetchSchemeItems` exists.
+        
+        const items = await schemeStore.fetchSchemeItems(schemeId)
+        sourceSchemeItems.value = items || []
+    } catch (e) {
+        ElMessage.error('加载步骤失败')
+    } finally {
+        importLoading.value = false
+    }
+}
+
+const handleSelectionChange = (selection) => {
+    selectedSourceItems.value = selection
+}
+
+const submitImportFromScheme = async () => {
+    if (selectedSourceItems.value.length === 0) return
+    
+    try {
+        let successCount = 0
+        for (const item of selectedSourceItems.value) {
+            const payload = {
+                scheme_id: currentScheme.value.id,
+                template_id: item.template_id,
+                output_filename_pattern: item.output_filename_pattern,
+                output_sub_package: item.output_sub_package,
+                variables: item.variables // Copy variables as well
+            }
+            const success = await schemeStore.createSchemeItem(payload)
+            if (success) successCount++
+        }
+        
+        ElMessage.success(`成功导入 ${successCount} 个步骤`)
+        importStepsVisible.value = false
+        // Refresh current list
+        await schemeStore.loadSchemeItems(currentScheme.value.id)
+    } catch (e) {
+        ElMessage.error('导入失败')
+    }
+}
+
+const copyCurrentStepsJson = () => {
+    const data = schemeItems.value.map(item => ({
+        template_id: item.template_id,
+        template_name: item.template_name, // Optional, for reference
+        output_filename_pattern: item.output_filename_pattern,
+        output_sub_package: item.output_sub_package,
+        variables: item.variables
+    }))
+    importJsonContent.value = JSON.stringify(data, null, 4)
+    ElMessage.success('已生成 JSON，请全选复制')
+}
+
+const submitImportFromJson = async () => {
+    try {
+        const items = JSON.parse(importJsonContent.value)
+        if (!Array.isArray(items)) {
+            ElMessage.error('JSON 格式错误：必须是数组')
+            return
+        }
+        
+        let successCount = 0
+        for (const item of items) {
+            if (!item.template_id || !item.output_filename_pattern) continue
+            
+            const payload = {
+                scheme_id: currentScheme.value.id,
+                template_id: item.template_id,
+                output_filename_pattern: item.output_filename_pattern,
+                output_sub_package: item.output_sub_package || '',
+                variables: item.variables || '{}'
+            }
+            const success = await schemeStore.createSchemeItem(payload)
+            if (success) successCount++
+        }
+        
+        ElMessage.success(`成功导入 ${successCount} 个步骤`)
+        importStepsVisible.value = false
+        await schemeStore.loadSchemeItems(currentScheme.value.id)
+    } catch (e) {
+        ElMessage.error('JSON 解析或导入失败：' + e.message)
+    }
+}
 
 // Helper to parse JSON variables safely
 const parseVariables = (vars) => {

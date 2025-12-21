@@ -8,9 +8,9 @@
               <span>配置列表</span>
               <div class="card-header-actions">
                 <el-button type="primary" @click="handleAdd">新增配置</el-button>
+                <el-button type="warning" @click="handleCopy" :disabled="!selectedConfig">复制选中</el-button>
                 <el-button type="danger" @click="handleDelete" :disabled="!selectedConfig">删除选中</el-button>
                 <el-button type="success" @click="handleGenerate" :disabled="!selectedConfig || isGenerating">
-                  <el-icon v-if="isGenerating"><Loading /></el-icon>
                   生成代码
                 </el-button>
               </div>
@@ -30,9 +30,8 @@
             <el-table-column prop="createdAt" label="创建时间"></el-table-column>
             <el-table-column label="操作" width="280">
               <template #default="scope">
-                <el-button size="small" @click="handleEdit(scope.row)">基础配置</el-button>
+                <el-button size="small" @click="handleEdit(scope.row)">生成配置</el-button>
                 <el-button size="small" @click="handleEditFields(scope.row)">字段配置</el-button>
-                <el-button size="small" type="danger" @click="handleDeleteSingle(scope.row)">删除</el-button>
               </template>
             </el-table-column>
           </el-table>
@@ -127,6 +126,34 @@ const getRowClassName = ({ row }) => {
 const handleAdd = () => {
   configStore.startEdit()
   configFormRef.value?.open()
+}
+
+// 复制配置
+const handleCopy = async () => {
+  if (!selectedConfig.value) return
+  
+  try {
+    // 调用API获取详细配置
+    const config = await configStore.loadConfigById(selectedConfig.value.id)
+    if (config) {
+      // 深度复制配置
+      const newConfig = JSON.parse(JSON.stringify(config))
+      // 清除ID，标记为新配置
+      newConfig.id = null
+      // 修改实体名称
+      newConfig.entityName = `${newConfig.entityName}Copy`
+      
+      // 开始编辑，但不立即保存，让用户确认
+      configStore.startEdit(newConfig)
+      configFormRef.value?.open()
+      ElMessage.success('已复制配置，请确认后保存')
+    } else {
+      ElMessage.error('获取配置详情失败')
+    }
+  } catch (error) {
+    ElMessage.error('复制配置失败')
+    console.error('复制配置失败:', error)
+  }
 }
 
 // 编辑配置

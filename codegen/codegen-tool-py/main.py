@@ -526,7 +526,9 @@ async def create_scheme(request: dict):
         name = request.get('name')
         description = request.get('description', '')
         group_name = request.get('group_name', 'Default')
-        variables = request.get('variables', '{}') # JSON string
+        variables = request.get('variables', '{}')
+        if isinstance(variables, dict):
+            variables = json.dumps(variables, ensure_ascii=False)
         
         if not name:
              raise HTTPException(status_code=400, detail="Name is required")

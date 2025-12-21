@@ -4,7 +4,7 @@ server:
 
 spring:
   profiles:
-    active: 126
+    active: dev
   mvc:
     async:
       request-timeout: 600000 # 设置异步请求超时时间为600000毫秒（10分钟）

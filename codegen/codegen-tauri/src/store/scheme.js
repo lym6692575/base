@@ -100,6 +100,19 @@ export const useSchemeStore = defineStore('scheme', {
       }
     },
 
+    async fetchSchemeItems(schemeId) {
+      try {
+        const result = await apiGetSchemeItems(schemeId)
+        if (result.status === 'success') {
+          return result.data || []
+        }
+        return []
+      } catch (error) {
+        console.error(`Failed to fetch items for scheme ${schemeId}:`, error)
+        return []
+      }
+    },
+
     async createSchemeItem(item) {
         try {
             this.loading = true

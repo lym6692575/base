@@ -1,7 +1,6 @@
 package com.example.demo.app.pwlpz.dto;
 
 import com.example.demo.common.lee.dto.BaseDto;
-import com.example.demo.common.lee.entity.BaseEntity;
 import lombok.*;
 import io.swagger.annotations.ApiModelProperty;
 

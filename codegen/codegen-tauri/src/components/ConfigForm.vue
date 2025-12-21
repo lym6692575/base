@@ -50,8 +50,8 @@
             <el-form-item label="模块名">
               <el-input v-model="formData.module" placeholder="请输入模块名"></el-input>
             </el-form-item>
-            <el-form-item label="输出目录">
-              <el-input v-model="formData.outputDir" placeholder="请输入代码生成的基础输出目录"></el-input>
+            <el-form-item label="项目目录">
+              <el-input v-model="formData.outputDir" placeholder="请输入代码生成的基础项目目录"></el-input>
             </el-form-item>
           </el-form>
         </div>
