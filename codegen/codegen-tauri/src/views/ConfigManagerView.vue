@@ -64,7 +64,7 @@
     <el-drawer
       v-model="fieldEditorVisible"
       title="字段配置"
-      :width="drawerWidth"
+      :size="drawerWidth"
       destroy-on-close
     >
       <div v-if="fieldEditingConfig" class="field-editor-container">
