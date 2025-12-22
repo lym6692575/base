@@ -1,0 +1,42 @@
+.lee-right-align
+  display: flex
+  justify-content: flex-end
+
+.lee-mt10
+  margin-top: 10px
+
+.lee-mt20
+  margin-top: 20px
+
+//单选模式下的隐藏全选
+.lee-table /deep/ .hide-select-all .el-table__header .el-checkbox
+  display: none
+
+.lee-table /deep/ .el-table--medium
+  .el-table__cell
+    padding: 0
+
+  // expand表格展开的样式，改样式用于修复展开与fix的样式冲突
+
+  //.el-table__body-wrapper
+  //  .el-table__expanded-cell
+  //    z-index: 100
+  //    padding: 0 !important
+  //
+  //  .el-table__fixed,
+  //  .el-table__fixed-right
+  //    .el-table__expanded-cell
+  //      visibility: hidden
+  //      padding: 0
+  //
+  //.el-button span
+  //  margin-left: 0
+
+.lee-table /deep/ .el-table__header,
+.lee-table /deep/ .el-table__body,
+.lee-table /deep/ .el-table__footer
+  width: 100%
+  table-layout: fixed !important
+
+.el-tooltip__popper
+  max-width: 20%
